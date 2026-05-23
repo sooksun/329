@@ -1,0 +1,527 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum TaskStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  SUBMITTED
+  REVISION_REQUIRED
+  VERIFIED
+  DONE
+  DELAYED
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum EvidenceStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum BudgetStatus {
+  DRAFT
+  REQUESTED
+  APPROVED
+  COMMITTED
+  PAID
+  VERIFIED
+}
+
+enum RiskStatus {
+  OPEN
+  MITIGATING
+  WATCHING
+  CLOSED
+}
+
+enum ReportType {
+  EXECUTIVE_SUMMARY
+  COMMITTEE_PROGRESS
+  BUDGET_REPORT
+  FINAL_EVENT_REPORT
+}
+
+enum ReportJobStatus {
+  QUEUED
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum StorageProvider {
+  LOCAL
+  S3
+}
+
+model Organization {
+  id          String               @id @default(cuid())
+  slug        String               @unique
+  name        String
+  projects    Project[]
+  members     OrganizationMember[]
+  created_at  DateTime             @default(now())
+  updated_at  DateTime             @updatedAt
+  deleted_at  DateTime?
+}
+
+model OrganizationMember {
+  id              String       @id @default(cuid())
+  organization_id String
+  user_id         String
+  organization    Organization @relation(fields: [organization_id], references: [id])
+  user            User         @relation(fields: [user_id], references: [id])
+  created_at      DateTime     @default(now())
+
+  @@unique([organization_id, user_id])
+}
+
+model User {
+  id              String            @id @default(cuid())
+  name            String
+  username        String            @unique
+  email           String?           @unique
+  password_hash   String
+  image           String?
+  roles           UserRole[]
+  orgMemberships  OrganizationMember[]
+  committeeLinks  CommitteeMember[]
+  ownedTasks      Task[]            @relation("TaskOwner")
+  reviewedTasks   Task[]            @relation("TaskReviewer")
+  assignedSubtasks Subtask[]        @relation("SubtaskOwner")
+  created_at      DateTime          @default(now())
+  updated_at      DateTime          @updatedAt
+  deleted_at      DateTime?
+}
+
+model Role {
+  id          String           @id @default(cuid())
+  name        String           @unique
+  label       String
+  users       UserRole[]
+  permissions RolePermission[]
+}
+
+model Permission {
+  id          String           @id @default(cuid())
+  key         String           @unique
+  label       String
+  roles       RolePermission[]
+}
+
+model UserRole {
+  user_id String
+  role_id String
+  user    User   @relation(fields: [user_id], references: [id])
+  role    Role   @relation(fields: [role_id], references: [id])
+
+  @@id([user_id, role_id])
+}
+
+model RolePermission {
+  role_id       String
+  permission_id String
+  role          Role       @relation(fields: [role_id], references: [id])
+  permission    Permission @relation(fields: [permission_id], references: [id])
+
+  @@id([role_id, permission_id])
+}
+
+model Project {
+  id                 String              @id @default(cuid())
+  organization_id    String
+  slug               String?
+  name               String
+  edition            String
+  description        String?
+  event_date         DateTime
+  event_end_date     DateTime?
+  organization       Organization        @relation(fields: [organization_id], references: [id])
+  planned_budget     Float               @default(0)
+  actual_budget      Float               @default(0)
+  reported_progress  Int                 @default(0)
+  evidence_progress  Int                 @default(0)
+  verified_progress  Int                 @default(0)
+  committees         Committee[]
+  plans              Plan[]
+  tasks              Task[]
+  evidence           Evidence[]
+  fileAssets         FileAsset[]
+  budgetItems        BudgetItem[]
+  risks              Risk[]
+  meetings           Meeting[]
+  snapshots          DashboardSnapshot[]
+  reports            PowerPointReport[]
+  reportJobs         ReportGenerationJob[]
+  notifications      Notification[]
+  created_at         DateTime            @default(now())
+  updated_at         DateTime            @updatedAt
+  created_by         String?
+  updated_by         String?
+  deleted_at         DateTime?
+
+  @@unique([organization_id, slug])
+  @@index([organization_id])
+}
+
+model Committee {
+  id                 String            @id @default(cuid())
+  project_id         String
+  name               String
+  owner_name         String
+  owner_initials     String
+  sort_order         Int               @default(0)
+  risk_level         String            @default("Low")
+  planned_budget     Float             @default(0)
+  actual_budget      Float             @default(0)
+  verified_progress  Int               @default(0)
+  project            Project           @relation(fields: [project_id], references: [id])
+  members            CommitteeMember[]
+  plans              Plan[]
+  tasks              Task[]
+  evidence           Evidence[]
+  budgetItems        BudgetItem[]
+  risks              Risk[]
+  created_at         DateTime          @default(now())
+  updated_at         DateTime          @updatedAt
+  created_by         String?
+  updated_by         String?
+  deleted_at         DateTime?
+}
+
+model CommitteeMember {
+  id           String    @id @default(cuid())
+  committee_id String
+  user_id      String
+  position     String
+  committee    Committee @relation(fields: [committee_id], references: [id])
+  user         User      @relation(fields: [user_id], references: [id])
+}
+
+model Plan {
+  id                 String       @id @default(cuid())
+  project_id         String
+  committee_id       String
+  name               String
+  description        String?
+  weight             Float        @default(1)
+  reported_progress  Int          @default(0)
+  evidence_progress  Int          @default(0)
+  verified_progress  Int          @default(0)
+  project            Project      @relation(fields: [project_id], references: [id])
+  committee          Committee    @relation(fields: [committee_id], references: [id])
+  tasks              Task[]
+  budgetItems        BudgetItem[]
+  created_at         DateTime     @default(now())
+  updated_at         DateTime     @updatedAt
+  created_by         String?
+  updated_by         String?
+  deleted_at         DateTime?
+}
+
+model Task {
+  id                 String           @id @default(cuid())
+  project_id         String
+  committee_id       String
+  plan_id            String
+  code               String           @unique
+  title              String
+  description        String?
+  success_criteria   String
+  status             TaskStatus       @default(NOT_STARTED)
+  priority           Priority         @default(MEDIUM)
+  weight             Float            @default(1)
+  start_date         DateTime
+  due_date           DateTime
+  owner_id           String?
+  reviewer_id        String?
+  reported_progress  Int              @default(0)
+  evidence_progress  Int              @default(0)
+  verified_progress  Int              @default(0)
+  is_critical        Boolean          @default(false)
+  project            Project          @relation(fields: [project_id], references: [id])
+  committee          Committee        @relation(fields: [committee_id], references: [id])
+  plan               Plan             @relation(fields: [plan_id], references: [id])
+  owner              User?            @relation("TaskOwner", fields: [owner_id], references: [id])
+  reviewer           User?            @relation("TaskReviewer", fields: [reviewer_id], references: [id])
+  subtasks           Subtask[]
+  dependencies       TaskDependency[] @relation("TaskDependsOn")
+  dependents         TaskDependency[] @relation("TaskDependent")
+  evidence           Evidence[]
+  budgetItems        BudgetItem[]
+  risks              Risk[]
+  comments           Comment[]
+  actionItems        MeetingActionItem[]
+  created_at         DateTime         @default(now())
+  updated_at         DateTime         @updatedAt
+  created_by         String?
+  updated_by         String?
+  deleted_at         DateTime?
+}
+
+model Subtask {
+  id                 String     @id @default(cuid())
+  task_id            String
+  owner_id           String?
+  title              String
+  notes              String?    @db.Text
+  status             TaskStatus @default(NOT_STARTED)
+  weight             Float      @default(1)
+  reported_progress  Int        @default(0)
+  evidence_progress  Int        @default(0)
+  verified_progress  Int        @default(0)
+  task               Task       @relation(fields: [task_id], references: [id])
+  owner              User?      @relation("SubtaskOwner", fields: [owner_id], references: [id])
+  evidence           Evidence[]
+  created_at         DateTime   @default(now())
+  updated_at         DateTime   @updatedAt
+  created_by         String?
+  updated_by         String?
+  deleted_at         DateTime?
+}
+
+model TaskDependency {
+  id             String @id @default(cuid())
+  task_id        String
+  depends_on_id  String
+  task           Task   @relation("TaskDependsOn", fields: [task_id], references: [id])
+  dependsOn      Task   @relation("TaskDependent", fields: [depends_on_id], references: [id])
+
+  @@unique([task_id, depends_on_id])
+}
+
+model Evidence {
+  id                 String         @id @default(cuid())
+  project_id         String
+  committee_id       String
+  task_id            String?
+  subtask_id         String?
+  file_asset_id      String
+  code               String         @unique
+  caption            String
+  status             EvidenceStatus @default(PENDING)
+  before_after_group String?
+  reviewed_by        String?
+  reviewed_at        DateTime?
+  rejection_reason   String?
+  project            Project        @relation(fields: [project_id], references: [id])
+  committee          Committee      @relation(fields: [committee_id], references: [id])
+  task               Task?          @relation(fields: [task_id], references: [id])
+  subtask            Subtask?       @relation(fields: [subtask_id], references: [id])
+  fileAsset          FileAsset      @relation(fields: [file_asset_id], references: [id])
+  created_at         DateTime       @default(now())
+  updated_at         DateTime       @updatedAt
+  created_by         String?
+  updated_by         String?
+  deleted_at         DateTime?
+}
+
+model FileAsset {
+  id                String           @id @default(cuid())
+  project_id        String
+  uuid_filename     String           @unique
+  original_filename String
+  mime_type         String
+  byte_size         Int
+  sha256_hash       String
+  storage_key       String
+  storage_provider  StorageProvider  @default(LOCAL)
+  is_private        Boolean          @default(true)
+  project           Project    @relation(fields: [project_id], references: [id])
+  evidence          Evidence[]
+  created_at        DateTime   @default(now())
+  updated_at        DateTime   @updatedAt
+  created_by        String?
+  updated_by        String?
+  deleted_at        DateTime?
+
+  @@unique([project_id, sha256_hash])
+}
+
+model BudgetItem {
+  id                 String              @id @default(cuid())
+  project_id         String
+  committee_id       String
+  plan_id            String?
+  task_id            String?
+  title              String
+  category           String
+  receipt_no         String?
+  planned_amount     Float               @default(0)
+  requested_amount   Float               @default(0)
+  approved_amount    Float               @default(0)
+  committed_amount   Float               @default(0)
+  actual_amount      Float               @default(0)
+  status             BudgetStatus        @default(DRAFT)
+  project            Project             @relation(fields: [project_id], references: [id])
+  committee          Committee           @relation(fields: [committee_id], references: [id])
+  plan               Plan?               @relation(fields: [plan_id], references: [id])
+  task               Task?               @relation(fields: [task_id], references: [id])
+  transactions       BudgetTransaction[]
+  created_at         DateTime            @default(now())
+  updated_at         DateTime            @updatedAt
+  created_by         String?
+  updated_by         String?
+  deleted_at         DateTime?
+
+  @@unique([project_id, receipt_no])
+}
+
+model BudgetTransaction {
+  id             String     @id @default(cuid())
+  budget_item_id String
+  amount         Float
+  status         BudgetStatus
+  note           String?
+  budgetItem     BudgetItem @relation(fields: [budget_item_id], references: [id])
+  created_at     DateTime   @default(now())
+  created_by     String?
+}
+
+model Risk {
+  id               String     @id @default(cuid())
+  project_id       String
+  committee_id     String
+  task_id          String?
+  code             String     @unique
+  title            String
+  likelihood       Int
+  impact           Int
+  score            Int
+  level            String
+  mitigation_plan  String
+  contingency_plan String
+  owner_name       String
+  owner_initials   String
+  status           RiskStatus @default(OPEN)
+  project          Project    @relation(fields: [project_id], references: [id])
+  committee        Committee  @relation(fields: [committee_id], references: [id])
+  task             Task?      @relation(fields: [task_id], references: [id])
+  created_at       DateTime   @default(now())
+  updated_at       DateTime   @updatedAt
+  created_by       String?
+  updated_by       String?
+  deleted_at       DateTime?
+}
+
+model Meeting {
+  id          String              @id @default(cuid())
+  project_id  String
+  title       String
+  meeting_at  DateTime
+  notes       String
+  decisions   String
+  project     Project             @relation(fields: [project_id], references: [id])
+  agendas     MeetingAgenda[]
+  actionItems MeetingActionItem[]
+  created_at  DateTime            @default(now())
+  updated_at  DateTime            @updatedAt
+  created_by  String?
+  updated_by  String?
+  deleted_at  DateTime?
+}
+
+model MeetingAgenda {
+  id         String  @id @default(cuid())
+  meeting_id String
+  title      String
+  order      Int
+  meeting    Meeting @relation(fields: [meeting_id], references: [id])
+}
+
+model MeetingActionItem {
+  id                  String     @id @default(cuid())
+  meeting_id          String
+  decision_title      String
+  description         String
+  owner_name          String
+  due_date            DateTime
+  linked_committee_id String?
+  linked_task_id      String?
+  status              TaskStatus @default(NOT_STARTED)
+  meeting             Meeting    @relation(fields: [meeting_id], references: [id])
+  linkedTask          Task?      @relation(fields: [linked_task_id], references: [id])
+}
+
+model DashboardSnapshot {
+  id             String             @id @default(cuid())
+  project_id     String
+  title          String
+  data           String             @db.LongText
+  created_by     String
+  project        Project            @relation(fields: [project_id], references: [id])
+  reports        PowerPointReport[]
+  created_at     DateTime           @default(now())
+}
+
+model PowerPointReport {
+  id           String            @id @default(cuid())
+  project_id   String
+  snapshot_id  String
+  type         ReportType
+  title        String
+  file_path    String
+  generated_by String
+  project      Project           @relation(fields: [project_id], references: [id])
+  snapshot     DashboardSnapshot @relation(fields: [snapshot_id], references: [id])
+  created_at   DateTime          @default(now())
+}
+
+model ReportGenerationJob {
+  id           String          @id @default(cuid())
+  project_id   String
+  snapshot_id  String
+  status       ReportJobStatus @default(QUEUED)
+  file_path    String?
+  report_id    String?
+  error        String?         @db.Text
+  generated_by String
+  bull_job_id  String?
+  project      Project         @relation(fields: [project_id], references: [id])
+  created_at   DateTime        @default(now())
+  completed_at DateTime?
+}
+
+model Notification {
+  id         String    @id @default(cuid())
+  project_id String
+  user_id    String?
+  title      String
+  body       String
+  read_at    DateTime?
+  project    Project   @relation(fields: [project_id], references: [id])
+  created_at DateTime  @default(now())
+}
+
+model Comment {
+  id         String   @id @default(cuid())
+  task_id    String
+  user_id    String?
+  body       String
+  task       Task     @relation(fields: [task_id], references: [id])
+  created_at DateTime @default(now())
+  deleted_at DateTime?
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  user_id     String?
+  action      String
+  entity_type String
+  entity_id   String
+  old_value   String?  @db.LongText
+  new_value   String?  @db.LongText
+  ip_address  String?
+  created_at  DateTime @default(now())
+}
