@@ -1,3 +1,5 @@
+import { formatThaiDateShort } from "@/lib/format-date";
+
 /** ปฏิทินงาน 329 — 3 = มีนาคม, 29 = วันที่ 29 (เริ่มทุกปี) */
 export const EVENT_329 = {
   /** รอบจัดงาน พ.ศ. 2570 */
@@ -23,9 +25,7 @@ export function addDays(date: Date, days: number) {
 }
 
 export function formatThaiEventPeriod(start = EVENT_329.start, end: Date = EVENT_329.end) {
-  const fmt = (value: Date) =>
-    value.toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "numeric" });
-  return `${fmt(start)} – ${fmt(end)}`;
+  return `${formatThaiDateShort(start)} – ${formatThaiDateShort(end)}`;
 }
 
 export function daysUntilEvent(from = new Date(), eventStart = EVENT_329.start) {

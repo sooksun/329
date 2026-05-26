@@ -43,6 +43,38 @@ export async function getTaskExportPageData(committeeId?: string) {
   return {
     project: { id: project.id, name: project.name, edition: project.edition },
     committees,
+    tasks: tasks.map((task) => ({
+      id: task.id,
+      code: task.code,
+      title: task.title,
+      description: task.description,
+      committee: { id: task.committee_id, name: task.committee.name },
+      owner_id: task.owner_id,
+      due_date: task.due_date,
+      status: task.status,
+      reported_progress: task.reported_progress,
+      subtasks: task.subtasks.map((subtask) => ({
+        id: subtask.id,
+        title: subtask.title,
+        owner_id: subtask.owner_id,
+        status: subtask.status,
+        reported_progress: subtask.reported_progress
+      })),
+      evidence: task.evidence.map((evidence) => ({
+        id: evidence.id,
+        caption: evidence.caption,
+        status: evidence.status,
+        created_at: evidence.created_at,
+        reviewed_by: evidence.reviewed_by,
+        rejection_reason: evidence.rejection_reason
+      })),
+      comments: task.comments.map((comment) => ({
+        id: comment.id,
+        body: comment.body,
+        user_id: comment.user_id,
+        created_at: comment.created_at
+      }))
+    })),
     rows,
     summary: {
       taskCount: tasks.length,

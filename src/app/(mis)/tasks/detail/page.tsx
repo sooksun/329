@@ -17,7 +17,7 @@ import { TaskCommentsPanel } from "@/components/task-comments-panel";
 import { TaskDependenciesPanel } from "@/components/task-dependencies-panel";
 import { TaskDoneChecklist } from "@/components/task-done-checklist";
 import { canMarkDone, taskDoneBlockers } from "@/lib/rules";
-import { thaiStatus } from "@/lib/utils";
+import { formatThaiDateLong, thaiStatus } from "@/lib/utils";
 
 const SubtaskEditor = dynamic(() => import("@/components/subtask-editor").then((mod) => mod.SubtaskEditor), {
   loading: () => <p className="text-sm text-[#667085]">กำลังโหลดงานย่อย...</p>
@@ -138,7 +138,7 @@ export default async function TaskDetailPage({ searchParams }: TaskDetailPagePro
         committeeName: task.committee.name,
         ownerName: task.owner?.name ?? null,
         reviewerName: task.reviewer?.name ?? null,
-        dueLabel: task.due_date.toLocaleDateString("th-TH", { day: "numeric", month: "long", year: "numeric" }),
+        dueLabel: formatThaiDateLong(task.due_date),
         createdByLabel: task.created_by ? (userName.get(task.created_by) ?? task.created_by) : "ไม่ระบุ",
         updatedByLabel: task.updated_by ? (userName.get(task.updated_by) ?? task.updated_by) : "ยังไม่มี",
         reported_progress: task.reported_progress,

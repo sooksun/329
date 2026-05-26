@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { Badge, Button } from "@/components/ui";
 import { errors, readApiError } from "@/lib/messages";
+import { toastConfirm, toastCreated, toastDeleted, toastError, toastSaved } from "@/lib/toast";
 import { thaiRiskLevel, thaiRiskStatus } from "@/lib/utils";
 
 type CommitteeOption = { id: string; name: string };
@@ -45,7 +46,6 @@ export function RiskManager({
   const router = useRouter();
   const [risks, setRisks] = useState(initialRisks);
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [committeeId, setCommitteeId] = useState(committees[0]?.id ?? "");
@@ -67,7 +67,6 @@ export function RiskManager({
   async function createRisk(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setLoading(true);
-    setMessage("");
     const form = new FormData(event.currentTarget);
     try {
       const response = await fetch("/api/risks", {
@@ -87,11 +86,11 @@ export function RiskManager({
         })
       });
       if (!response.ok) throw new Error(await readApiError(response, errors.saveFailed));
-      setMessage("เพิ่มความเสี่ยงแล้ว");
+      toastCreated("เพิ่มความเสี่ยงแล้ว");
       setCreateOpen(false);
       router.refresh();
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : errors.saveFailed);
+      toastError(error instanceof Error ? error.message : errors.saveFailed);
     } finally {
       setLoading(false);
     }
@@ -117,29 +116,30 @@ export function RiskManager({
       });
       if (!response.ok) throw new Error(await readApiError(response, errors.saveFailed));
       setEditingId(null);
-      setMessage("บันทึกความเสี่ยงแล้ว");
+      toastSaved("บันทึกความเสี่ยงแล้ว");
       router.refresh();
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : errors.saveFailed);
+      toastError(error instanceof Error ? error.message : errors.saveFailed);
     } finally {
       setLoading(false);
     }
   }
 
-  async function removeRisk(risk: RiskRow) {
-    if (!window.confirm(`ลบความเสี่ยง ${risk.code}?`)) return;
-    setLoading(true);
-    try {
-      const response = await fetch(`/api/risks/${risk.id}`, { method: "DELETE" });
-      if (!response.ok) throw new Error(await readApiError(response, errors.saveFailed));
-      setRisks((prev) => prev.filter((r) => r.id !== risk.id));
-      setMessage("ลบแล้ว");
-      router.refresh();
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : errors.saveFailed);
-    } finally {
-      setLoading(false);
-    }
+  function removeRisk(risk: RiskRow) {
+    toastConfirm(`ลบความเสี่ยง ${risk.code}?`, async () => {
+      setLoading(true);
+      try {
+        const response = await fetch(`/api/risks/${risk.id}`, { method: "DELETE" });
+        if (!response.ok) throw new Error(await readApiError(response, errors.saveFailed));
+        setRisks((prev) => prev.filter((r) => r.id !== risk.id));
+        toastDeleted("ลบแล้ว");
+        router.refresh();
+      } catch (error) {
+        toastError(error instanceof Error ? error.message : errors.saveFailed);
+      } finally {
+        setLoading(false);
+      }
+    });
   }
 
   if (!canManageAny) return null;
@@ -303,7 +303,6 @@ export function RiskManager({
             </div>
           ))}
       </div>
-      {message ? <p className="mt-2 text-sm font-bold text-[#123f76]">{message}</p> : null}
     </div>
   );
 }

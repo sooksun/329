@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Badge, Card, ProgressBar } from "@/components/ui";
 import type { TaskBoardItem } from "@/types/task-board";
+import { formatThaiDateShort } from "@/lib/utils";
 
 function priorityTone(priority: string): "red" | "gold" {
   return priority === "CRITICAL" || priority === "HIGH" ? "red" : "gold";
@@ -25,7 +26,7 @@ export function TaskCard({ task, compact = false }: { task: TaskBoardItem; compa
         </div>
         <h3 className={`font-black leading-snug text-[#101827] ${compact ? "text-sm" : "text-base"}`}>{task.title}</h3>
         <p className="mt-1.5 text-xs text-[#667085]">
-          {task.ownerName ?? "ยังไม่ระบุ"} · กำหนด {due.toLocaleDateString("th-TH", { day: "numeric", month: "short" })}
+          {task.ownerName ?? "ยังไม่ระบุ"} · กำหนด {formatThaiDateShort(due)}
         </p>
         <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-[#475467]">
           <span>รายงาน {task.reported_progress}%</span>

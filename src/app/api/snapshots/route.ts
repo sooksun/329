@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { formatThaiDateTime } from "@/lib/format-date";
 import { permissions } from "@/lib/rbac";
 import { errors } from "@/lib/messages";
 import { prisma } from "@/lib/prisma";
@@ -19,7 +20,7 @@ export async function POST() {
   const snapshot = await prisma.dashboardSnapshot.create({
     data: {
       project_id: payload.project.id,
-      title: `Snapshot ${new Date().toLocaleString("th-TH")}`,
+      title: `Snapshot ${formatThaiDateTime(new Date())}`,
       data: JSON.stringify(payload.frozen),
       created_by: auth.user.id
     }

@@ -4,6 +4,7 @@ import { Bell } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { readApiError } from "@/lib/messages";
+import { formatThaiDateTimeShort } from "@/lib/format-date";
 
 type NotificationItem = {
   id: string;
@@ -12,14 +13,6 @@ type NotificationItem = {
   read_at: string | null;
   created_at: string;
 };
-
-function formatWhen(iso: string) {
-  try {
-    return new Date(iso).toLocaleString("th-TH", { dateStyle: "short", timeStyle: "short" });
-  } catch {
-    return "";
-  }
-}
 
 export function NotificationBell({ className = "" }: { className?: string }) {
   const [open, setOpen] = useState(false);
@@ -126,7 +119,7 @@ export function NotificationBell({ className = "" }: { className?: string }) {
                 >
                   <div className="text-sm font-bold text-[#101827]">{item.title}</div>
                   <div className="mt-0.5 text-xs leading-snug text-[#667085]">{item.body}</div>
-                  <div className="mt-1 text-[10px] text-[#98a2b3]">{formatWhen(item.created_at)}</div>
+                  <div className="mt-1 text-[10px] text-[#98a2b3]">{formatThaiDateTimeShort(item.created_at)}</div>
                 </button>
               ))
             )}

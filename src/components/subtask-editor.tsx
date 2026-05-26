@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Badge, Button, ProgressBar, buttonClasses } from "@/components/ui";
+import { toastCreated, toastError, toastSaved } from "@/lib/toast";
 import { thaiStatus } from "@/lib/utils";
 import type { SubtaskItem } from "@/types/subtask";
 
@@ -41,11 +42,9 @@ function SubtaskCard({
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [message, setMessage] = useState("");
 
   async function saveSubtask(form: HTMLFormElement) {
     setSaving(true);
-    setMessage("");
     try {
       const values = new FormData(form);
       const response = await fetch(`/api/subtasks/${subtask.id}`, {
@@ -64,11 +63,11 @@ function SubtaskCard({
         const body = await response.json().catch(() => ({}));
         throw new Error(body.error ?? "บันทึกไม่สำเร็จ");
       }
-      setMessage("บันทึกงานย่อยแล้ว");
+      toastSaved("บันทึกงานย่อยแล้ว");
       setEditing(false);
       router.refresh();
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "บันทึกไม่สำเร็จ");
+      toastError(error instanceof Error ? error.message : "บันทึกไม่สำเร็จ");
     } finally {
       setSaving(false);
     }
@@ -76,7 +75,6 @@ function SubtaskCard({
 
   async function uploadEvidence(form: HTMLFormElement) {
     setUploading(true);
-    setMessage("");
     try {
       const formData = new FormData(form);
       formData.set("task_id", taskId);
@@ -87,10 +85,10 @@ function SubtaskCard({
         throw new Error(body.error ?? "อัปโหลดไม่สำเร็จ");
       }
       form.reset();
-      setMessage("อัปโหลดรูป/หลักฐานของงานย่อยนี้แล้ว");
+      toastCreated("อัปโหลดรูป/หลักฐานของงานย่อยนี้แล้ว");
       router.refresh();
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "อัปโหลดไม่สำเร็จ");
+      toastError(error instanceof Error ? error.message : "อัปโหลดไม่สำเร็จ");
     } finally {
       setUploading(false);
     }
@@ -261,8 +259,6 @@ function SubtaskCard({
       ) : (
         <p className="mt-3 text-sm text-[#667085]">ยังไม่มีรูป/หลักฐานสำหรับงานย่อยนี้</p>
       )}
-
-      {message ? <p className="mt-3 text-sm font-bold text-[#123f76]">{message}</p> : null}
     </div>
   );
 }

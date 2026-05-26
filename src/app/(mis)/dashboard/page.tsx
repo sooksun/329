@@ -15,7 +15,7 @@ import {
 import { linkButtonClasses } from "@/lib/button-styles";
 import { getDashboardPageData } from "@/server/project/loaders/dashboard";
 import { formatThaiEventPeriod, EVENT_329 } from "@/lib/event-calendar";
-import { formatBaht } from "@/lib/utils";
+import { formatBaht, formatThaiDate } from "@/lib/utils";
 
 export default async function DashboardPage() {
   const data = await getDashboardPageData();
@@ -154,7 +154,7 @@ export default async function DashboardPage() {
                     </Badge>
                   </div>
                   <p className="text-xs text-[#667085] sm:text-sm">
-                    {task.owner?.name} · {task.due_date.toLocaleDateString("th-TH")}
+                    {task.owner?.name} · {formatThaiDate(task.due_date)}
                   </p>
                 </Link>
               ))}

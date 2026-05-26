@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui";
 import { errors } from "@/lib/messages";
+import { toastError, toastSaved } from "@/lib/toast";
 
 type TaskEdit = {
   id: string;
@@ -39,12 +40,10 @@ export function TaskDetailActions({
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState("");
   const formRef = useRef<HTMLFormElement>(null);
 
   async function save(nextStatus?: string) {
     setSaving(true);
-    setMessage("");
     try {
       const values = formRef.current ? new FormData(formRef.current) : new FormData();
       const payload = {
@@ -62,11 +61,11 @@ export function TaskDetailActions({
         const body = await response.json().catch(() => ({}));
         throw new Error(body.error ?? errors.saveFailed);
       }
-      setMessage("บันทึกแล้ว");
+      toastSaved("บันทึกแล้ว");
       setEditing(false);
       router.refresh();
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "บันทึกไม่สำเร็จ");
+      toastError(error instanceof Error ? error.message : "บันทึกไม่สำเร็จ");
     } finally {
       setSaving(false);
     }
@@ -88,7 +87,6 @@ export function TaskDetailActions({
       {!canEdit && !mobileSticky ? (
         <p className="text-sm text-[#667085]">คุณดูภารกิจนี้ได้อย่างเดียว — แก้ไขได้เฉพาะงานในคณะกรรมการของตนเอง</p>
       ) : null}
-      {message ? <p className={`text-sm font-bold text-[#b91528] ${mobileSticky ? "text-center" : ""}`}>{message}</p> : null}
     </>
   );
 
@@ -140,7 +138,6 @@ export function TaskDetailActions({
         <Button type="submit" variant="gold" disabled={saving}>{saving ? "กำลังบันทึก..." : "บันทึก"}</Button>
         <Button onClick={() => setEditing(false)} disabled={saving}>ยกเลิก</Button>
       </div>
-      {message ? <p className="mt-2 text-sm font-bold text-[#b91528]">{message}</p> : null}
     </form>
   );
 

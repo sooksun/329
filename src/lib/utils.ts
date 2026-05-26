@@ -5,6 +5,14 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+export {
+  formatThaiDate,
+  formatThaiDateLong,
+  formatThaiDateShort,
+  formatThaiDateTime,
+  formatThaiDateTimeShort
+} from "@/lib/format-date";
+
 export function formatBaht(value: number) {
   if (value >= 1_000_000) return `฿${(value / 1_000_000).toFixed(2)}ล้าน`;
   if (value >= 1_000) return `฿${Math.round(value / 1_000)}พัน`;

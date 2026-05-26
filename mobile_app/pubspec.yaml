@@ -1,0 +1,29 @@
+name: mis_329_mobile
+description: "329 MIS mobile app for committee members."
+publish_to: "none"
+version: 0.1.0+1
+
+environment:
+  sdk: ">=3.2.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  dio: ^5.7.0
+  file_picker: ^6.2.1
+  flutter_dotenv: ^5.1.0
+  flutter_secure_storage: ^9.2.2
+  image_picker: ^1.0.7
+  intl: ^0.19.0
+  provider: ^6.1.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.2
+
+flutter:
+  uses-material-design: true
+  assets:
+    - .env

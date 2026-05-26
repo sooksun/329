@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Badge } from "@/components/ui";
+import { formatThaiDate } from "@/lib/utils";
 import { ganttBarStyle, GANTT_WINDOW } from "@/lib/event-calendar";
 
 type TimelineTask = {
@@ -30,7 +31,7 @@ export function TimelineMobileList({ tasks }: { tasks: TimelineTask[] }) {
             </div>
             <h3 className="text-sm font-black leading-snug">{task.title}</h3>
             <p className="mt-1 text-xs text-[#667085]">
-              {task.start_date.toLocaleDateString("th-TH")} – {task.due_date.toLocaleDateString("th-TH")}
+              {formatThaiDate(task.start_date)} – {formatThaiDate(task.due_date)}
             </p>
             <div className="relative mt-3 h-2 overflow-hidden rounded-full bg-[#eeeae0]">
               <div

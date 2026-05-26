@@ -9,6 +9,8 @@ out/
 .env
 .env.local
 .env.*.local
+.env.production
+.env.production.local
 
 # logs & local artifacts
 *.log

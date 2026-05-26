@@ -2,8 +2,11 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { FormDateField, FormDateTimeField } from "@/components/ui/thai-date-picker";
 import { Button } from "@/components/ui";
 import { errors, readApiError } from "@/lib/messages";
+import { toastConfirm, toastCreated, toastDeleted, toastError, toastSaved } from "@/lib/toast";
+import { formatThaiDateTime } from "@/lib/utils";
 
 type TaskOption = { id: string; code: string; title: string };
 
@@ -38,14 +41,12 @@ export function MeetingManager({
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState("");
 
   if (!canManage) return null;
 
   async function createMeeting(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setLoading(true);
-    setMessage("");
     const form = new FormData(event.currentTarget);
     try {
       const response = await fetch("/api/meetings", {
@@ -65,11 +66,11 @@ export function MeetingManager({
         })
       });
       if (!response.ok) throw new Error(await readApiError(response, errors.saveFailed));
-      setMessage("สร้างการประชุมแล้ว");
+      toastCreated("สร้างการประชุมแล้ว");
       setOpen(false);
       router.refresh();
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : errors.saveFailed);
+      toastError(error instanceof Error ? error.message : errors.saveFailed);
     } finally {
       setLoading(false);
     }
@@ -92,28 +93,29 @@ export function MeetingManager({
       });
       if (!response.ok) throw new Error(await readApiError(response, errors.saveFailed));
       setEditingId(null);
-      setMessage("บันทึกการประชุมแล้ว");
+      toastSaved("บันทึกการประชุมแล้ว");
       router.refresh();
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : errors.saveFailed);
+      toastError(error instanceof Error ? error.message : errors.saveFailed);
     } finally {
       setLoading(false);
     }
   }
 
-  async function removeMeeting(id: string, title: string) {
-    if (!window.confirm(`ลบการประชุม「${title}」?`)) return;
-    setLoading(true);
-    try {
-      const response = await fetch(`/api/meetings/${id}`, { method: "DELETE" });
-      if (!response.ok) throw new Error(await readApiError(response, errors.saveFailed));
-      setMessage("ลบการประชุมแล้ว");
-      router.refresh();
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : errors.saveFailed);
-    } finally {
-      setLoading(false);
-    }
+  function removeMeeting(id: string, title: string) {
+    toastConfirm(`ลบการประชุม「${title}」?`, async () => {
+      setLoading(true);
+      try {
+        const response = await fetch(`/api/meetings/${id}`, { method: "DELETE" });
+        if (!response.ok) throw new Error(await readApiError(response, errors.saveFailed));
+        toastDeleted("ลบการประชุมแล้ว");
+        router.refresh();
+      } catch (error) {
+        toastError(error instanceof Error ? error.message : errors.saveFailed);
+      } finally {
+        setLoading(false);
+      }
+    });
   }
 
   return (
@@ -132,12 +134,14 @@ export function MeetingManager({
             <input name="title" className="mt-1 h-9 w-full rounded border px-2 text-sm" required />
           </label>
           <label className="text-xs font-bold">
-            วันเวลา
-            <input name="meeting_at" type="datetime-local" className="mt-1 h-9 w-full rounded border px-2 text-sm" required />
+            วันเวลา (พ.ศ.)
+            <div className="mt-1">
+              <FormDateTimeField name="meeting_at" required />
+            </div>
           </label>
           <label className="text-xs font-bold sm:col-span-2">
             วาระ (หนึ่งบรรทัดต่อหัวข้อ)
-            <textarea name="agenda_text" className="mt-1 w-full rounded border px-2 py-1 text-sm" rows={3} placeholder="ภาพรวมโครงการ&#10;งบประมาณ&#10;ความเสี่ยง" />
+            <textarea name="agenda_text" className="mt-1 w-full rounded border px-2 py-1 text-sm" rows={3} />
           </label>
           <label className="text-xs font-bold sm:col-span-2">
             บันทึก
@@ -161,8 +165,10 @@ export function MeetingManager({
             <input name="action_owner" className="mt-1 h-9 w-full rounded border px-2 text-sm" />
           </label>
           <label className="text-xs font-bold">
-            กำหนดส่ง
-            <input name="action_due" type="date" className="mt-1 h-9 w-full rounded border px-2 text-sm" />
+            กำหนดส่ง (พ.ศ.)
+            <div className="mt-1">
+              <FormDateField name="action_due" />
+            </div>
           </label>
           <label className="text-xs font-bold sm:col-span-2">
             ผูกภารกิจ
@@ -197,6 +203,7 @@ export function MeetingManager({
             </div>
             {editingId === meeting.id ? (
               <form
+                key={`edit-${meeting.id}`}
                 className="mt-2 grid gap-2"
                 onSubmit={(e) => {
                   e.preventDefault();
@@ -204,12 +211,7 @@ export function MeetingManager({
                 }}
               >
                 <input name="title" defaultValue={meeting.title} className="h-9 rounded border px-2 text-sm" required />
-                <input
-                  name="meeting_at"
-                  type="datetime-local"
-                  defaultValue={meeting.meeting_at.slice(0, 16)}
-                  className="h-9 rounded border px-2 text-sm"
-                />
+                <FormDateTimeField name="meeting_at" defaultValue={meeting.meeting_at} required />
                 <textarea
                   name="agenda_text"
                   defaultValue={meeting.agendas.sort((a, b) => a.order - b.order).map((a) => a.title).join("\n")}
@@ -224,13 +226,12 @@ export function MeetingManager({
               </form>
             ) : (
               <p className="mt-1 text-xs text-[#667085]">
-                {new Date(meeting.meeting_at).toLocaleString("th-TH")} · {meeting.agendas.length} วาระ · {meeting.actionItems.length} action
+                {formatThaiDateTime(meeting.meeting_at)} · {meeting.agendas.length} วาระ · {meeting.actionItems.length} action
               </p>
             )}
           </div>
         ))}
       </div>
-      {message ? <p className="mt-2 text-sm font-bold text-[#123f76]">{message}</p> : null}
     </div>
   );
 }

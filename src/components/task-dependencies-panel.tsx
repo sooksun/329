@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Badge, Button } from "@/components/ui";
 import { errors, readApiError } from "@/lib/messages";
+import { toastCreated, toastDeleted, toastError } from "@/lib/toast";
 import { thaiStatus } from "@/lib/utils";
 
 type DepTask = {
@@ -37,7 +38,6 @@ export function TaskDependenciesPanel({
   const [blocked, setBlocked] = useState(initialBlocked);
   const [selected, setSelected] = useState("");
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState("");
 
   const linkedIds = new Set(dependsOn.map((d) => d.dependsOn.id));
   const options = pickerTasks.filter((t) => !linkedIds.has(t.id));
@@ -46,7 +46,6 @@ export function TaskDependenciesPanel({
     event.preventDefault();
     if (!canEdit || !selected) return;
     setLoading(true);
-    setMessage("");
     try {
       const response = await fetch(`/api/tasks/${taskId}/dependencies`, {
         method: "POST",
@@ -57,10 +56,10 @@ export function TaskDependenciesPanel({
       const created = (await response.json()) as { id: string; dependsOn: DepTask };
       setDependsOn((prev) => [...prev, { id: created.id, dependsOn: created.dependsOn }]);
       setSelected("");
-      setMessage("เพิ่มความสัมพันธ์แล้ว");
+      toastCreated("เพิ่มความสัมพันธ์แล้ว");
       router.refresh();
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : errors.saveFailed);
+      toastError(error instanceof Error ? error.message : errors.saveFailed);
     } finally {
       setLoading(false);
     }
@@ -73,9 +72,10 @@ export function TaskDependenciesPanel({
       const response = await fetch(`/api/tasks/${taskId}/dependencies/${dependencyId}`, { method: "DELETE" });
       if (!response.ok) throw new Error(await readApiError(response, errors.saveFailed));
       setDependsOn((prev) => prev.filter((d) => d.id !== dependencyId));
+      toastDeleted("ลบความสัมพันธ์แล้ว");
       router.refresh();
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : errors.saveFailed);
+      toastError(error instanceof Error ? error.message : errors.saveFailed);
     } finally {
       setLoading(false);
     }
@@ -156,8 +156,6 @@ export function TaskDependenciesPanel({
           )}
         </ul>
       </div>
-
-      {message ? <p className="text-sm font-bold text-[#123f76]">{message}</p> : null}
     </div>
   );
 }

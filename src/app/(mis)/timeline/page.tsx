@@ -3,6 +3,7 @@ import { TimelineMobileList } from "@/components/timeline-mobile-list";
 import { EVENT_329, GANTT_MONTH_LABELS, GANTT_WINDOW, formatThaiEventPeriod, ganttBarStyle } from "@/lib/event-calendar";
 import Link from "next/link";
 import { CardGrid, PageHeader, PageLink, PageStack, SectionCard } from "@/components/page/page-layout";
+import { formatThaiDate } from "@/lib/utils";
 import { getTimelinePageData } from "@/server/project/loaders/timeline";
 
 type TimelinePageProps = {
@@ -57,7 +58,7 @@ export default async function TimelinePage({ searchParams }: TimelinePageProps) 
               >
                 <div className="mb-2 flex justify-between gap-2">
                   <Badge tone={task.status === "DELAYED" ? "red" : task.is_critical ? "gold" : "blue"}>{task.code}</Badge>
-                  <span className="text-xs text-[#667085]">{task.due_date.toLocaleDateString("th-TH")}</span>
+                  <span className="text-xs text-[#667085]">{formatThaiDate(task.due_date)}</span>
                 </div>
                 <h2 className="text-sm font-black leading-snug sm:text-base">{task.title}</h2>
                 <p className="text-xs text-[#667085] sm:text-sm">{task.committee.name}</p>
@@ -83,7 +84,7 @@ export default async function TimelinePage({ searchParams }: TimelinePageProps) 
                     <div className="p-3">
                       <b className="text-sm">{task.title}</b>
                       <p className="text-xs text-[#667085] sm:text-sm">
-                        {task.committee.name} · {task.start_date.toLocaleDateString("th-TH")} – {task.due_date.toLocaleDateString("th-TH")}
+                        {task.committee.name} · {formatThaiDate(task.start_date)} – {formatThaiDate(task.due_date)}
                       </p>
                     </div>
                     <div className="relative m-2 h-8 rounded bg-[#eeeae0]">

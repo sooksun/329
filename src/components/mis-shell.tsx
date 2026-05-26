@@ -14,6 +14,7 @@ import {
   PanelLeftOpen,
   PiggyBank,
   Presentation,
+  RotateCcw,
   Search,
   Settings,
   ShieldAlert,
@@ -135,7 +136,8 @@ function SidebarPanel({
   const pathname = usePathname();
   const adminNav: NavItem[] = [
     ...(data.user.isAdmin ? [{ href: "/admin/users", label: "จัดการผู้ใช้", icon: Users }] : []),
-    ...(data.user.canViewAudit ? [{ href: "/audit-log", label: "Audit Log", icon: ScrollText }] : [])
+    ...(data.user.canViewAudit ? [{ href: "/audit-log", label: "Audit Log", icon: ScrollText }] : []),
+    ...(data.user.isAdmin ? [{ href: "/admin/reset", label: "รีเซ็ตข้อมูลเริ่มงานจริง", icon: RotateCcw }] : [])
   ];
 
   return (

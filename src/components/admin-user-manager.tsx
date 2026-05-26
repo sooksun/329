@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Badge, Button } from "@/components/ui";
+import { toastCreated, toastError } from "@/lib/toast";
 
 type CommitteeOption = { id: string; name: string };
 
@@ -23,12 +24,10 @@ export function AdminUserManager({
 }) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState("");
 
   async function createUser(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSaving(true);
-    setMessage("");
     const form = new FormData(event.currentTarget);
     try {
       const response = await fetch("/api/users", {
@@ -45,11 +44,11 @@ export function AdminUserManager({
       });
       const body = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(body.error ?? "สร้างผู้ใช้ไม่สำเร็จ");
-      setMessage(`สร้างผู้ใช้ ${body.username} แล้ว`);
+      toastCreated(`สร้างผู้ใช้ ${body.username} แล้ว`);
       event.currentTarget.reset();
       router.refresh();
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "สร้างผู้ใช้ไม่สำเร็จ");
+      toastError(error instanceof Error ? error.message : "สร้างผู้ใช้ไม่สำเร็จ");
     } finally {
       setSaving(false);
     }
@@ -102,7 +101,6 @@ export function AdminUserManager({
         <Button type="submit" variant="gold" disabled={saving}>
           {saving ? "กำลังสร้าง..." : "สร้างผู้ใช้"}
         </Button>
-        {message ? <p className="text-sm font-bold text-[#123f76]">{message}</p> : null}
       </form>
 
       <div className="space-y-2">

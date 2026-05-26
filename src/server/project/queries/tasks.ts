@@ -8,6 +8,7 @@ const taskListInclude = {
   evidence: { where: { deleted_at: null } },
   budgetItems: { where: { deleted_at: null } },
   risks: { where: { deleted_at: null } },
+  comments: { where: { deleted_at: null }, orderBy: { created_at: "desc" } },
   subtasks: {
     where: { deleted_at: null },
     orderBy: { created_at: "asc" },

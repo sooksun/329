@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui";
+import { toastError, toastSaved } from "@/lib/toast";
 
 type ProfileFormProps = {
   initial: { name: string; username: string };
@@ -11,12 +12,10 @@ type ProfileFormProps = {
 export function ProfileForm({ initial }: ProfileFormProps) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState("");
 
   async function save(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSaving(true);
-    setMessage("");
     const form = new FormData(event.currentTarget);
     try {
       const response = await fetch("/api/users/me", {
@@ -31,10 +30,10 @@ export function ProfileForm({ initial }: ProfileFormProps) {
       });
       const body = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(body.error ?? "บันทึกไม่สำเร็จ");
-      setMessage("บันทึกโปรไฟล์แล้ว — ถ้าเปลี่ยนรหัสผ่าน ให้ใช้รหัสใหม่ครั้งถัดไป");
+      toastSaved("บันทึกโปรไฟล์แล้ว — ถ้าเปลี่ยนรหัสผ่าน ให้ใช้รหัสใหม่ครั้งถัดไป");
       router.refresh();
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "บันทึกไม่สำเร็จ");
+      toastError(error instanceof Error ? error.message : "บันทึกไม่สำเร็จ");
     } finally {
       setSaving(false);
     }
@@ -71,7 +70,6 @@ export function ProfileForm({ initial }: ProfileFormProps) {
       <Button type="submit" variant="gold" disabled={saving} className="w-full justify-center sm:w-auto">
         {saving ? "กำลังบันทึก..." : "บันทึกโปรไฟล์"}
       </Button>
-      {message ? <p className="text-sm font-bold text-[#123f76]">{message}</p> : null}
     </form>
   );
 }

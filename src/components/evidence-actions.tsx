@@ -4,17 +4,16 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui";
 import { emitNotificationsChanged } from "@/lib/notification-events";
+import { toastError, toastSaved } from "@/lib/toast";
 
 export function EvidenceActions({ id, status }: { id: string; status: string }) {
   const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
-  const [message, setMessage] = useState("");
   const [rejectOpen, setRejectOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
 
   async function review(nextStatus: "APPROVED" | "REJECTED", rejection_reason?: string) {
     setLoading(nextStatus);
-    setMessage("");
     try {
       const response = await fetch("/api/evidence/review", {
         method: "POST",
@@ -31,13 +30,13 @@ export function EvidenceActions({ id, status }: { id: string; status: string }) 
         const body = await response.json().catch(() => ({}));
         throw new Error(body.error ?? "บันทึกผลตรวจไม่สำเร็จ");
       }
-      setMessage(nextStatus === "APPROVED" ? "อนุมัติแล้ว" : "บันทึกว่าไม่ผ่านแล้ว — แจ้งผู้อัปโหลดแล้ว");
+      toastSaved(nextStatus === "APPROVED" ? "อนุมัติแล้ว" : "บันทึกว่าไม่ผ่านแล้ว — แจ้งผู้อัปโหลดแล้ว");
       setRejectOpen(false);
       setRejectReason("");
       emitNotificationsChanged();
       router.refresh();
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "บันทึกผลตรวจไม่สำเร็จ");
+      toastError(error instanceof Error ? error.message : "บันทึกผลตรวจไม่สำเร็จ");
     } finally {
       setLoading(null);
     }
@@ -82,7 +81,6 @@ export function EvidenceActions({ id, status }: { id: string; status: string }) 
           </Button>
         </div>
       ) : null}
-      {message ? <p className="text-sm font-bold text-[#123f76]">{message}</p> : null}
     </div>
   );
 }

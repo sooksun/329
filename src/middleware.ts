@@ -19,6 +19,7 @@ export const config = {
     "/mobile/:path*",
     "/profile/:path*",
     "/admin/:path*",
+    "/api/admin/:path*",
     "/api/evidence/:path*",
     "/api/budget/:path*",
     "/api/committees/:path*",

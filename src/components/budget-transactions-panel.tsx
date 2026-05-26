@@ -4,6 +4,8 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Badge, Button } from "@/components/ui";
 import { errors, readApiError } from "@/lib/messages";
+import { formatThaiDateTimeShort } from "@/lib/format-date";
+import { toastConfirm, toastDeleted, toastError, toastSaved } from "@/lib/toast";
 import { formatBaht, thaiStatus } from "@/lib/utils";
 
 export type BudgetTransactionRow = {
@@ -30,12 +32,10 @@ export function BudgetTransactionsPanel({
   const [transactions, setTransactions] = useState(initialTransactions);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState("");
 
   async function addTransaction(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setLoading(true);
-    setMessage("");
     const form = new FormData(event.currentTarget);
     try {
       const response = await fetch(`/api/budget/items/${budgetItemId}/transactions`, {
@@ -49,11 +49,11 @@ export function BudgetTransactionsPanel({
       });
       if (!response.ok) throw new Error(await readApiError(response, errors.saveFailed));
       event.currentTarget.reset();
-      setMessage("บันทึกธุรกรรมแล้ว — ยอดใช้จริงอัปเดตจากรายการ PAID/VERIFIED");
+      toastSaved("บันทึกธุรกรรมแล้ว — ยอดใช้จริงอัปเดตจากรายการ PAID/VERIFIED");
       await reload();
       router.refresh();
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : errors.saveFailed);
+      toastError(error instanceof Error ? error.message : errors.saveFailed);
     } finally {
       setLoading(false);
     }
@@ -66,28 +66,21 @@ export function BudgetTransactionsPanel({
     setTransactions(body.items ?? []);
   }
 
-  async function removeTransaction(id: string) {
-    if (!window.confirm("ลบธุรกรรมนี้? ยอดใช้จริงจะคำนวณใหม่")) return;
-    setLoading(true);
-    try {
-      const response = await fetch(`/api/budget/items/${budgetItemId}/transactions/${id}`, { method: "DELETE" });
-      if (!response.ok) throw new Error(await readApiError(response, errors.saveFailed));
-      setMessage("ลบธุรกรรมแล้ว");
-      await reload();
-      router.refresh();
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : errors.saveFailed);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  function formatWhen(iso: string) {
-    try {
-      return new Date(iso).toLocaleString("th-TH", { dateStyle: "short", timeStyle: "short" });
-    } catch {
-      return "";
-    }
+  function removeTransaction(id: string) {
+    toastConfirm("ลบธุรกรรมนี้? ยอดใช้จริงจะคำนวณใหม่", async () => {
+      setLoading(true);
+      try {
+        const response = await fetch(`/api/budget/items/${budgetItemId}/transactions/${id}`, { method: "DELETE" });
+        if (!response.ok) throw new Error(await readApiError(response, errors.saveFailed));
+        toastDeleted("ลบธุรกรรมแล้ว");
+        await reload();
+        router.refresh();
+      } catch (error) {
+        toastError(error instanceof Error ? error.message : errors.saveFailed);
+      } finally {
+        setLoading(false);
+      }
+    });
   }
 
   const paidTotal = transactions
@@ -151,7 +144,7 @@ export function BudgetTransactionsPanel({
                     </span>
                     {tx.note ? <p className="mt-0.5 text-[#667085]">{tx.note}</p> : null}
                     <p className="text-[10px] text-[#98a2b3]">
-                      {tx.created_by_name} · {formatWhen(tx.created_at)}
+                      {tx.created_by_name} · {formatThaiDateTimeShort(tx.created_at)}
                     </p>
                   </div>
                   {canManage ? (
@@ -168,7 +161,6 @@ export function BudgetTransactionsPanel({
               ))
             )}
           </ul>
-          {message ? <p className="text-xs font-bold text-[#123f76]">{message}</p> : null}
         </div>
       ) : null}
     </div>

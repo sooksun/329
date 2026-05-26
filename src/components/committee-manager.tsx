@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Badge, Button } from "@/components/ui";
 import { errors } from "@/lib/messages";
+import { toastConfirm, toastCreated, toastDeleted, toastError, toastSaved } from "@/lib/toast";
 
 type UserOption = { id: string; name: string; username: string };
 
@@ -37,7 +38,6 @@ export function CommitteeManager({
   memberManageRights: Record<string, boolean>;
 }) {
   const router = useRouter();
-  const [message, setMessage] = useState("");
   const [loading, setLoading] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
 
@@ -54,7 +54,6 @@ export function CommitteeManager({
   async function createCommittee(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setLoading("create");
-    setMessage("");
     const form = new FormData(event.currentTarget);
     try {
       await apiJson("/api/committees", {
@@ -69,11 +68,11 @@ export function CommitteeManager({
           planned_budget: Number(form.get("planned_budget") || 0)
         })
       });
-      setMessage("สร้างคณะกรรมการแล้ว");
+      toastCreated("สร้างคณะกรรมการแล้ว");
       event.currentTarget.reset();
       router.refresh();
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : errors.saveFailed);
+      toastError(error instanceof Error ? error.message : errors.saveFailed);
     } finally {
       setLoading(null);
     }
@@ -81,7 +80,6 @@ export function CommitteeManager({
 
   async function saveCommittee(committeeId: string, form: HTMLFormElement) {
     setLoading(`edit-${committeeId}`);
-    setMessage("");
     const data = new FormData(form);
     try {
       await apiJson(`/api/committees/${committeeId}`, {
@@ -96,35 +94,34 @@ export function CommitteeManager({
           planned_budget: Number(data.get("planned_budget"))
         })
       });
-      setMessage("บันทึกคณะแล้ว");
+      toastSaved("บันทึกคณะแล้ว");
       setEditingId(null);
       router.refresh();
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : errors.saveFailed);
+      toastError(error instanceof Error ? error.message : errors.saveFailed);
     } finally {
       setLoading(null);
     }
   }
 
-  async function deleteCommittee(committeeId: string, name: string) {
-    if (!window.confirm(`ลบคณะ「${name}」? (ได้เฉพาะคณะที่ไม่มีภารกิจ)`)) return;
-    setLoading(`del-${committeeId}`);
-    setMessage("");
-    try {
-      await apiJson(`/api/committees/${committeeId}`, { method: "DELETE" });
-      setMessage("ลบคณะแล้ว");
-      router.refresh();
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : errors.saveFailed);
-    } finally {
-      setLoading(null);
-    }
+  function deleteCommittee(committeeId: string, name: string) {
+    toastConfirm(`ลบคณะ「${name}」? (ได้เฉพาะคณะที่ไม่มีภารกิจ)`, async () => {
+      setLoading(`del-${committeeId}`);
+      try {
+        await apiJson(`/api/committees/${committeeId}`, { method: "DELETE" });
+        toastDeleted("ลบคณะแล้ว");
+        router.refresh();
+      } catch (error) {
+        toastError(error instanceof Error ? error.message : errors.saveFailed);
+      } finally {
+        setLoading(null);
+      }
+    });
   }
 
   async function addMember(committeeId: string, event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setLoading(`member-${committeeId}`);
-    setMessage("");
     const form = new FormData(event.currentTarget);
     try {
       await apiJson(`/api/committees/${committeeId}/members`, {
@@ -135,28 +132,29 @@ export function CommitteeManager({
           position: form.get("position")
         })
       });
-      setMessage("เพิ่มสมาชิกแล้ว");
+      toastCreated("เพิ่มสมาชิกแล้ว");
       event.currentTarget.reset();
       router.refresh();
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : errors.saveFailed);
+      toastError(error instanceof Error ? error.message : errors.saveFailed);
     } finally {
       setLoading(null);
     }
   }
 
-  async function removeMember(committeeId: string, memberId: string, userName: string) {
-    if (!window.confirm(`ถอน ${userName} ออกจากคณะ?`)) return;
-    setLoading(`rm-${memberId}`);
-    try {
-      await apiJson(`/api/committees/${committeeId}/members/${memberId}`, { method: "DELETE" });
-      setMessage("ถอนสมาชิกแล้ว");
-      router.refresh();
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : errors.saveFailed);
-    } finally {
-      setLoading(null);
-    }
+  function removeMember(committeeId: string, memberId: string, userName: string) {
+    toastConfirm(`ถอน ${userName} ออกจากคณะ?`, async () => {
+      setLoading(`rm-${memberId}`);
+      try {
+        await apiJson(`/api/committees/${committeeId}/members/${memberId}`, { method: "DELETE" });
+        toastDeleted("ถอนสมาชิกแล้ว");
+        router.refresh();
+      } catch (error) {
+        toastError(error instanceof Error ? error.message : errors.saveFailed);
+      } finally {
+        setLoading(null);
+      }
+    });
   }
 
   return (
@@ -342,7 +340,6 @@ export function CommitteeManager({
           ))}
       </div>
 
-      {message ? <p className="text-sm font-bold text-[#123f76]">{message}</p> : null}
     </div>
   );
 }

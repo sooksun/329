@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui";
 import { emitNotificationsChanged } from "@/lib/notification-events";
+import { toastCreated, toastError } from "@/lib/toast";
 
 type UploadTask = {
   id: string;
@@ -16,12 +17,10 @@ type UploadTask = {
 export function EvidenceUploadForm({ tasks }: { tasks: UploadTask[] }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState("");
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setLoading(true);
-    setMessage("");
     try {
       const form = new FormData(event.currentTarget);
       const response = await fetch("/api/evidence/upload", {
@@ -33,11 +32,11 @@ export function EvidenceUploadForm({ tasks }: { tasks: UploadTask[] }) {
         throw new Error(body.error ?? "อัปโหลดไม่สำเร็จ");
       }
       event.currentTarget.reset();
-      setMessage("อัปโหลดหลักฐานแล้ว รอตรวจอนุมัติ");
+      toastCreated("อัปโหลดหลักฐานแล้ว รอตรวจอนุมัติ");
       emitNotificationsChanged();
       router.refresh();
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "อัปโหลดไม่สำเร็จ");
+      toastError(error instanceof Error ? error.message : "อัปโหลดไม่สำเร็จ");
     } finally {
       setLoading(false);
     }
@@ -71,7 +70,6 @@ export function EvidenceUploadForm({ tasks }: { tasks: UploadTask[] }) {
           <Upload size={16} /> {loading ? "กำลังอัปโหลด..." : "อัปโหลด"}
         </Button>
       </div>
-      {message ? <p className="text-sm font-bold text-[#123f76] sm:col-span-2 lg:col-span-4">{message}</p> : null}
     </form>
   );
 }

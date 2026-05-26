@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { readApiError } from "@/lib/messages";
+import { formatThaiDateTime } from "@/lib/utils";
 
 type LogRow = {
   id: string;
@@ -84,7 +85,7 @@ export function AuditLogViewer({ initialItems }: { initialItems: LogRow[] }) {
               items.map((log) => (
                 <tr key={log.id} className="border-t border-[#f0eee7]">
                   <td className="whitespace-nowrap px-3 py-2 text-xs">
-                    {new Date(log.created_at).toLocaleString("th-TH")}
+                    {formatThaiDateTime(log.created_at)}
                   </td>
                   <td className="px-3 py-2 text-xs">{log.user?.name ?? "—"}</td>
                   <td className="px-3 py-2 font-bold">{log.action}</td>

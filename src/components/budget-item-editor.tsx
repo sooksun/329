@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui";
 import { errors, readApiError } from "@/lib/messages";
+import { toastError, toastSaved } from "@/lib/toast";
 import { thaiStatus } from "@/lib/utils";
 
 type BudgetItemEditorProps = {
@@ -30,7 +31,6 @@ export function BudgetItemEditor({
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState("");
   const [form, setForm] = useState({
     actual_amount: String(actualAmount),
     approved_amount: String(approvedAmount),
@@ -42,7 +42,6 @@ export function BudgetItemEditor({
   async function save(event: React.FormEvent) {
     event.preventDefault();
     setLoading(true);
-    setMessage("");
     try {
       const response = await fetch(`/api/budget/items/${id}`, {
         method: "PATCH",
@@ -56,11 +55,11 @@ export function BudgetItemEditor({
         })
       });
       if (!response.ok) throw new Error(await readApiError(response, errors.saveFailed));
-      setMessage("บันทึกแล้ว");
+      toastSaved("บันทึกแล้ว");
       setOpen(false);
       router.refresh();
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : errors.saveFailed);
+      toastError(error instanceof Error ? error.message : errors.saveFailed);
     } finally {
       setLoading(false);
     }
@@ -141,7 +140,6 @@ export function BudgetItemEditor({
           </Button>
         </form>
       ) : null}
-      {message ? <p className="mt-1 text-xs font-bold text-[#123f76]">{message}</p> : null}
     </div>
   );
 }

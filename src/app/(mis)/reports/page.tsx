@@ -4,7 +4,7 @@ import { ReportGenerateButton } from "@/components/report-actions";
 import { Badge } from "@/components/ui";
 import { PageHeader, PageStack, SectionCard, SplitLayout } from "@/components/page/page-layout";
 import { linkButtonClasses } from "@/lib/button-styles";
-import { thaiReportType } from "@/lib/utils";
+import { formatThaiDateTime, thaiReportType } from "@/lib/utils";
 import { getReportsPageData } from "@/server/project/loaders/reports";
 
 export default async function ReportsPage() {
@@ -47,7 +47,7 @@ export default async function ReportsPage() {
                   <div className="rounded-md border p-3" key={report.id}>
                     <b className="text-sm sm:text-base">{report.title}</b>
                     <p className="text-xs text-[#667085] sm:text-sm">
-                      {thaiReportType(report.type)} · {report.created_at.toLocaleString("th-TH")}
+                      {thaiReportType(report.type)} · {formatThaiDateTime(report.created_at)}
                     </p>
                     <Link
                       href={`/api/reports/${report.id}/download`}

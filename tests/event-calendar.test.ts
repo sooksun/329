@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { EVENT_329, formatThaiEventPeriod, scheduleTaskWindow } from "../src/lib/event-calendar";
+import { formatThaiDateLong } from "../src/lib/format-date";
 
 describe("329 event calendar", () => {
   it("anchors event on 29 March 2570 (2027 CE)", () => {
@@ -27,8 +28,11 @@ describe("329 event calendar", () => {
     expect(start.getTime()).toBeGreaterThan(EVENT_329.end.getTime());
   });
 
-  it("formats Thai event period", () => {
-    expect(formatThaiEventPeriod()).toMatch(/29/);
-    expect(formatThaiEventPeriod()).toMatch(/5/);
+  it("formats Thai event period in Buddhist Era", () => {
+    const text = formatThaiEventPeriod();
+    expect(text).toMatch(/29/);
+    expect(text).toMatch(/5/);
+    expect(text).toMatch(/2570/);
+    expect(formatThaiDateLong(EVENT_329.start)).toMatch(/2570/);
   });
 });

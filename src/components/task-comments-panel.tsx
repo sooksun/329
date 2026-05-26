@@ -4,6 +4,8 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui";
 import { errors, readApiError } from "@/lib/messages";
+import { formatThaiDateTimeShort } from "@/lib/format-date";
+import { toastConfirm, toastDeleted, toastError, toastSaved } from "@/lib/toast";
 
 export type TaskCommentItem = {
   id: string;
@@ -30,13 +32,11 @@ export function TaskCommentsPanel({
   const [comments, setComments] = useState(initialComments);
   const [body, setBody] = useState("");
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState("");
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     if (!canEdit) return;
     setLoading(true);
-    setMessage("");
     try {
       const response = await fetch(`/api/tasks/${taskId}/comments`, {
         method: "POST",
@@ -47,36 +47,30 @@ export function TaskCommentsPanel({
       const created = (await response.json()) as TaskCommentItem;
       setComments((prev) => [created, ...prev]);
       setBody("");
-      setMessage("บันทึกความคิดเห็นแล้ว");
+      toastSaved("บันทึกความคิดเห็นแล้ว");
       router.refresh();
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : errors.saveFailed);
+      toastError(error instanceof Error ? error.message : errors.saveFailed);
     } finally {
       setLoading(false);
     }
   }
 
-  async function remove(commentId: string) {
-    if (!window.confirm("ลบความคิดเห็นนี้?")) return;
-    setLoading(true);
-    try {
-      const response = await fetch(`/api/tasks/${taskId}/comments/${commentId}`, { method: "DELETE" });
-      if (!response.ok) throw new Error(await readApiError(response, errors.saveFailed));
-      setComments((prev) => prev.filter((c) => c.id !== commentId));
-      router.refresh();
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : errors.saveFailed);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  function formatWhen(iso: string) {
-    try {
-      return new Date(iso).toLocaleString("th-TH", { dateStyle: "short", timeStyle: "short" });
-    } catch {
-      return "";
-    }
+  function remove(commentId: string) {
+    toastConfirm("ลบความคิดเห็นนี้?", async () => {
+      setLoading(true);
+      try {
+        const response = await fetch(`/api/tasks/${taskId}/comments/${commentId}`, { method: "DELETE" });
+        if (!response.ok) throw new Error(await readApiError(response, errors.saveFailed));
+        setComments((prev) => prev.filter((c) => c.id !== commentId));
+        toastDeleted("ลบความคิดเห็นแล้ว");
+        router.refresh();
+      } catch (error) {
+        toastError(error instanceof Error ? error.message : errors.saveFailed);
+      } finally {
+        setLoading(false);
+      }
+    });
   }
 
   return (
@@ -112,7 +106,7 @@ export function TaskCommentsPanel({
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div>
                   <b className="text-sm text-[#101827]">{comment.author_name}</b>
-                  <span className="ml-2 text-[10px] text-[#98a2b3]">{formatWhen(comment.created_at)}</span>
+                  <span className="ml-2 text-[10px] text-[#98a2b3]">{formatThaiDateTimeShort(comment.created_at)}</span>
                 </div>
                 {(comment.user_id === currentUserId || isAdmin) && canEdit ? (
                   <button
@@ -130,7 +124,6 @@ export function TaskCommentsPanel({
           ))
         )}
       </ul>
-      {message ? <p className="text-sm font-bold text-[#123f76]">{message}</p> : null}
     </div>
   );
 }

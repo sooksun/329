@@ -8,7 +8,7 @@ import { PageHeader, PageStack, SectionCard, SplitLayout } from "@/components/pa
 import { getSessionUser } from "@/server/auth/session";
 import { getMeetingsPageData } from "@/server/project/loaders/meetings";
 import { canManageMeetings } from "@/server/meetings/access";
-import { thaiStatus } from "@/lib/utils";
+import { formatThaiDate, thaiStatus } from "@/lib/utils";
 import { linkButtonClasses } from "@/lib/button-styles";
 
 export default async function MeetingsPage() {
@@ -62,7 +62,7 @@ export default async function MeetingsPage() {
                     <p className="mt-2 text-sm text-[#667085]">{meeting.notes}</p>
                   </div>
                   <span className="shrink-0 self-start">
-                    <Badge tone="gold">{meeting.meeting_at.toLocaleDateString("th-TH")}</Badge>
+                    <Badge tone="gold">{formatThaiDate(meeting.meeting_at)}</Badge>
                   </span>
                 </div>
                 <h3 className="mt-4 text-sm font-black">วาระ</h3>
@@ -89,7 +89,7 @@ export default async function MeetingsPage() {
                     <Badge>{thaiStatus(item.status)}</Badge>
                   </div>
                   <p className="mt-1 text-xs text-[#667085]">
-                    {item.owner_name} · {item.due_date.toLocaleDateString("th-TH")}
+                    {item.owner_name} · {formatThaiDate(item.due_date)}
                   </p>
                   <p className="mt-2 text-sm">{item.description}</p>
                   <Link
