@@ -43,6 +43,25 @@ describe("task export", () => {
     expect(rows[0].task_success_criteria).toBe("ครบตามแผน");
   });
 
+  it("neutralizes spreadsheet formula-injection cells", () => {
+    const csv = taskExportRowsToCsv([
+      {
+        task_code: "=1+1",
+        committee_name: "คณะ",
+        task_title: "+SUM(A1)",
+        task_description: "-2",
+        task_success_criteria: "@cmd",
+        subtask_title: "",
+        subtask_description: "",
+        subtask_success_criteria: ""
+      }
+    ]);
+    expect(csv).toContain("'=1+1");
+    expect(csv).toContain("'+SUM(A1)");
+    expect(csv).toContain("'-2");
+    expect(csv).toContain("'@cmd");
+  });
+
   it("escapes csv cells with commas and quotes", () => {
     const csv = taskExportRowsToCsv([
       {

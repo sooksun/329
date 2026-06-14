@@ -17,6 +17,8 @@ out/
 storage/uploads/*
 !storage/uploads/.gitkeep
 storage/backups/
+storage/reports/*
+!storage/reports/.gitkeep
 
 # OS / IDE
 .DS_Store

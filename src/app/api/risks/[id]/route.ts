@@ -6,7 +6,7 @@ import { invalidateProjectCache } from "@/server/cache/invalidate";
 import { getCommitteeAccessContext } from "@/server/auth/committee-access";
 import { requireApiSession } from "@/server/auth/session";
 import { forbiddenResponse } from "@/server/permissions/assert";
-import { canManageRisk } from "@/server/risks/access";
+import { canManageRisk, canManageRisksGlobally } from "@/server/risks/access";
 import { softDeleteRisk, updateRisk } from "@/server/risks/manage";
 import { getActiveProjectForUser } from "@/server/tenant/project-access";
 
@@ -31,6 +31,22 @@ export async function PATCH(request: Request) {
   }
 
   const body = await request.json().catch(() => ({}));
+
+  // ห้ามย้ายความเสี่ยงไปคณะที่ตนไม่มีสิทธิ์ดูแล หรือคณะนอกโปรเจกต์
+  const newCommitteeId = body.committee_id ? String(body.committee_id) : undefined;
+  if (newCommitteeId && newCommitteeId !== existing.committee_id) {
+    if (!canManageRisksGlobally(auth.user) && !access.committeeIds.includes(newCommitteeId)) {
+      return forbiddenResponse(errors.riskManageForbidden);
+    }
+    const targetCommittee = await prisma.committee.findFirst({
+      where: { id: newCommitteeId, project_id: project.id, deleted_at: null },
+      select: { id: true }
+    });
+    if (!targetCommittee) {
+      return NextResponse.json({ error: errors.dataInvalid }, { status: 400 });
+    }
+  }
+
   try {
     const risk = await updateRisk(
       id,

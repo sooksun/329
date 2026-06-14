@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { errors } from "@/lib/messages";
+import { can, permissions } from "@/lib/rbac";
 import { canMarkDone, validateTaskInput } from "@/lib/rules";
 import type { Priority, TaskStatus } from "@prisma/client";
 import { invalidateProjectCache } from "@/server/cache/invalidate";
@@ -27,7 +28,9 @@ export async function PATCH(request: Request) {
 
   const nextStatus = String(body.status ?? task.status) as TaskStatus;
   const reportedProgress = Number(body.reported_progress ?? task.reported_progress);
-  const verifiedProgress = Number(body.verified_progress ?? task.verified_progress);
+  // verified_progress เป็นค่าที่ "ผู้ตรวจ" รับรอง — ผู้แก้ทั่วไปตั้งเองไม่ได้ (กันปั๊ม 100 แล้วปิด DONE)
+  const canSetVerified = access.isGlobalAdmin || can(user.roles, permissions.evidenceReview) || user.id === task.reviewer_id;
+  const verifiedProgress = canSetVerified ? Number(body.verified_progress ?? task.verified_progress) : task.verified_progress;
   const title = String(body.title ?? task.title).trim();
 
   if (!title) return NextResponse.json({ error: errors.taskTitleRequired }, { status: 400 });

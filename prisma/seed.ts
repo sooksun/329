@@ -76,7 +76,8 @@ const taskSeeds: TaskSeed[] = [
     plan: "อำนวยการและการเงิน",
     subtasks: ["ประมาณการค่าใช้จ่ายด้านสนาม/สถานที่", "ประมาณการค่าอาหารและน้ำดื่ม", "ประมาณการค่ารางวัล/ถ้วย/เหรียญ", "ประมาณการค่าเครื่องเสียง/เวที/เต็นท์", "ประมาณการค่าป้าย/ประชาสัมพันธ์", "ประมาณการค่าปฐมพยาบาลและความปลอดภัย", "ประมาณการค่าเอกสาร/วัสดุสำนักงาน", "กำหนดเงินสำรองฉุกเฉินอย่างน้อย 10-15%"],
     outputs: ["ตารางงบประมาณรวม", "รายการงบประมาณแยกตามฝ่าย", "เอกสารอนุมัติงบ"],
-    budget: 2850000,
+    // ไม่ตั้ง budget: งานนี้คือ "ยอดรวมทั้งโครงการ" ไม่ใช่รายการค่าใช้จ่ายเดี่ยว —
+    // ถ้าตั้งจะถูกสร้างเป็น BudgetItem แล้ว rollupBudgetTotals จะรวมยอดคณะพองเกินจริง
     risk: "Critical"
   },
   {
@@ -440,7 +441,7 @@ async function main() {
     data: {
       name: "ประธานจัดงาน กีฬา 329 ชาวจีนยูนาน",
       username: "director",
-      password_hash: await bcrypt.hash("password123", 10),
+      password_hash: await bcrypt.hash(process.env.SEED_DIRECTOR_PASSWORD ?? "password123", 10),
       roles: { create: [{ role_id: roleByName.get("Project Director")!.id }, { role_id: roleByName.get("Project Secretary")!.id }] }
     }
   });
@@ -448,12 +449,13 @@ async function main() {
     data: {
       name: "ผู้ดูแลระบบ MIS 329",
       username: "admin",
-      password_hash: await bcrypt.hash("admin123", 10),
+      password_hash: await bcrypt.hash(process.env.SEED_ADMIN_PASSWORD ?? "admin123", 10),
       roles: { create: [{ role_id: roleByName.get("Super Admin")!.id }] }
     }
   });
 
-  const memberPasswordHash = await bcrypt.hash(DEFAULT_MEMBER_PASSWORD, 10);
+  const memberPassword = process.env.SEED_MEMBER_PASSWORD ?? DEFAULT_MEMBER_PASSWORD;
+  const memberPasswordHash = await bcrypt.hash(memberPassword, 10);
   const committeeUsersByCommittee = new Map<string, { leadId: string; memberIds: string[] }>();
 
   for (const group of committeeUserSeeds) {
@@ -829,11 +831,13 @@ async function main() {
   });
 
   const userCount = await prisma.user.count({ where: { deleted_at: null } });
+  const pwHint = (envKey: string, def: string) => (process.env[envKey] ? "(ตั้งผ่าน env)" : def);
   console.log("\n=== บัญชีผู้ใช้ 329 MIS (10 คน) ===");
-  console.log("ผู้ดูแล: admin / admin123");
-  console.log("ประธาน: director / password123");
-  console.log(`สมาชิกฝ่าย (8 คน · 4 กลุ่มงาน): รหัสผ่านเริ่มต้น ${DEFAULT_MEMBER_PASSWORD}`);
+  console.log(`ผู้ดูแล: admin / ${pwHint("SEED_ADMIN_PASSWORD", "admin123")}`);
+  console.log(`ประธาน: director / ${pwHint("SEED_DIRECTOR_PASSWORD", "password123")}`);
+  console.log(`สมาชิกฝ่าย (8 คน · 4 กลุ่มงาน): รหัสผ่านเริ่มต้น ${pwHint("SEED_MEMBER_PASSWORD", DEFAULT_MEMBER_PASSWORD)}`);
   console.log("ตัวอย่าง: gov_lead, ops_lead, host_lead, mis_lead ... (ดู prisma/user-seeds.ts)");
+  console.log("⚠️  Production: ตั้ง SEED_ADMIN_PASSWORD / SEED_DIRECTOR_PASSWORD / SEED_MEMBER_PASSWORD แล้วเปลี่ยนรหัสหลัง deploy");
   console.log(`รวมผู้ใช้ในระบบ: ${userCount} คน\n`);
 }
 

@@ -67,7 +67,11 @@ export function buildTaskExportRows(tasks: ExportTaskInput[]): TaskExportRow[] {
 }
 
 function escapeCsvCell(value: string) {
-  const normalized = value.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+  let normalized = value.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+  // กัน CSV/spreadsheet formula injection: เซลล์ที่ขึ้นต้นด้วย = + - @ หรือ tab อาจถูกตีความเป็นสูตร
+  if (/^[=+\-@\t]/.test(normalized)) {
+    normalized = `'${normalized}`;
+  }
   if (/[",\n]/.test(normalized)) {
     return `"${normalized.replace(/"/g, '""')}"`;
   }

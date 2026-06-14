@@ -17,7 +17,8 @@ export function validatePassword(value: string, options?: { required?: boolean }
   if (!value) {
     return options?.required ? "กรุณาระบุรหัสผ่าน" : null;
   }
-  if (value.length < 6) return "รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร";
+  if (value.length < 10) return "รหัสผ่านต้องมีอย่างน้อย 10 ตัวอักษร";
+  if (value.length > 128) return "รหัสผ่านยาวเกินไป (ไม่เกิน 128 ตัวอักษร)";
   return null;
 }
 

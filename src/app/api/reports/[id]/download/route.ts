@@ -5,6 +5,7 @@ import { GetObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { prisma } from "@/lib/prisma";
 import { requireApiSession } from "@/server/auth/session";
 import { canDownloadFile, forbiddenResponse } from "@/server/permissions/assert";
+import { userCanAccessProject } from "@/server/tenant/project-access";
 import { isS3Storage, s3Config } from "@/server/storage/config";
 
 export async function GET(_request: Request, context: { params: Promise<{ id: string }> }) {
@@ -14,7 +15,10 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
 
   const { id } = await context.params;
   const report = await prisma.powerPointReport.findUnique({ where: { id } });
-  if (!report) return NextResponse.json({ error: "ไม่พบรายงาน" }, { status: 404 });
+  // กัน IDOR: ดาวน์โหลดได้เฉพาะรายงานของโปรเจกต์ที่ผู้ใช้เข้าถึงได้
+  if (!report || !(await userCanAccessProject(auth.user, report.project_id))) {
+    return NextResponse.json({ error: "ไม่พบรายงาน" }, { status: 404 });
+  }
 
   let bytes: Buffer;
   if (isS3Storage() && !report.file_path.includes("\\") && !path.isAbsolute(report.file_path)) {
@@ -39,6 +43,7 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
     headers: {
       "Content-Type": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
       "Content-Disposition": `attachment; filename*=UTF-8''${encodeURIComponent(safeName)}`,
+      "X-Content-Type-Options": "nosniff",
       "Cache-Control": "private, no-store"
     }
   });

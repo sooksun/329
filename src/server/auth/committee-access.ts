@@ -53,11 +53,9 @@ export function canEditCommitteeTask(
 ) {
   if (access.isGlobalAdmin) return true;
   if (!access.committeeIds.includes(task.committee_id)) return false;
-  return (
-    can(user.roles, permissions.taskManage) ||
-    can(user.roles, permissions.taskUpdateOwn) ||
-    access.committeeIds.includes(task.committee_id)
-  );
+  // อยู่ในคณะของงานแล้ว — แต่ต้องมีสิทธิ์แก้งานจริง (หัวหน้าคณะ=task:manage หรือเจ้าหน้าที่=task:update-own)
+  // ไม่ใช่แค่เป็นสมาชิกคณะก็แก้ได้ (เดิมมี clause committeeIds.includes(...) ซ้ำทำให้ตรวจสิทธิ์เป็นโมฆะ)
+  return can(user.roles, permissions.taskManage) || can(user.roles, permissions.taskUpdateOwn);
 }
 
 export function filterTasksByCommitteeAccess<T extends { committee_id: string }>(

@@ -36,9 +36,14 @@ export const notificationService = {
     });
   },
 
-  async markRead(notificationId: string, projectId: string) {
+  async markRead(notificationId: string, projectId: string, userId?: string) {
     return prisma.notification.updateMany({
-      where: { id: notificationId, project_id: projectId },
+      // จำกัดเฉพาะแจ้งเตือนรวม (user_id = null) หรือของผู้ใช้คนนั้นเอง — กันมาร์คอ่านของคนอื่น
+      where: {
+        id: notificationId,
+        project_id: projectId,
+        ...(userId ? { OR: [{ user_id: null }, { user_id: userId }] } : {})
+      },
       data: { read_at: new Date() }
     });
   }

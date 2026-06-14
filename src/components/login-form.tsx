@@ -7,8 +7,8 @@ import { useState } from "react";
 
 export function LoginForm() {
   const searchParams = useSearchParams();
-  const [username, setUsername] = useState("director");
-  const [password, setPassword] = useState("password123");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -40,7 +40,7 @@ export function LoginForm() {
         <ShieldCheck className="text-[#123f76]" />
         <div>
           <h2 className="text-2xl font-black">เข้าสู่ระบบ</h2>
-          <p className="text-sm text-[#667085]">ตัวอย่าง: director / password123</p>
+          <p className="text-sm text-[#667085]">กรอกชื่อผู้ใช้และรหัสผ่านของคุณ</p>
         </div>
       </div>
 
@@ -48,7 +48,7 @@ export function LoginForm() {
       <input
         name="username"
         className="mb-4 h-11 w-full rounded-md border border-[#d8d1c1] px-3"
-        placeholder="director"
+        placeholder="ชื่อผู้ใช้"
         value={username}
         onChange={(event) => setUsername(event.target.value)}
         autoComplete="username"
@@ -59,7 +59,7 @@ export function LoginForm() {
         name="password"
         type="password"
         className="mb-4 h-11 w-full rounded-md border border-[#d8d1c1] px-3"
-        placeholder="password123"
+        placeholder="รหัสผ่าน"
         value={password}
         onChange={(event) => setPassword(event.target.value)}
         autoComplete="current-password"

@@ -31,7 +31,7 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: "ต้องระบุ id" }, { status: 400 });
   }
 
-  await notificationService.markRead(notificationId, project.id);
+  await notificationService.markRead(notificationId, project.id, auth.user.id);
   const unread = await notificationService.unreadCount(project.id, auth.user.id);
   return NextResponse.json({ ok: true, unread });
 }
