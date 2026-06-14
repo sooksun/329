@@ -17,7 +17,7 @@ import {
 } from "@/components/page/page-layout";
 import { prisma } from "@/lib/prisma";
 import { getBudgetPageData } from "@/server/project/loaders/budget";
-import { canManageBudget } from "@/server/budget/access";
+import { canManageBudget, FINANCE_COMMITTEE_NAME } from "@/server/budget/access";
 import { getSessionUser } from "@/server/auth/session";
 import { formatBaht, thaiStatus } from "@/lib/utils";
 
@@ -33,7 +33,7 @@ export default async function BudgetPage({ searchParams }: BudgetPageProps) {
   const canEditBudget = user ? await canManageBudget(user, data.project.id) : false;
   const params = (await searchParams) ?? {};
   const b = data.summary.budget;
-  const budgetCommittee = data.committees.find((committee) => committee.name === "งบประมาณและการเงิน");
+  const budgetCommittee = data.committees.find((committee) => committee.name === FINANCE_COMMITTEE_NAME);
   const chartData = data.committeeStats.map((committee) => ({
     name: committee.name,
     planned: Math.round(committee.budgetPlanned / 1000),

@@ -97,9 +97,12 @@ function preEventSchedule(priority: TaskPriorityBand, index: number) {
   return { start, due };
 }
 
-/** กำหนด start/due ของภารกิจตามคณะและความสำคัญ — สอดคล้องรอบ 29 มี.ค. – 5 เม.ย. 2570 */
-export function scheduleTaskWindow(priority: TaskPriorityBand, index: number, committeePlan: string) {
-  if (committeePlan === "สรุปผลและพัฒนาปีถัดไป") return postEventSchedule(index);
-  if (committeePlan === "ปฏิบัติการวันงาน") return eventWeekSchedule(index);
+/** ช่วงเวลาของภารกิจเทียบกับวันงาน */
+export type TaskPhase = "pre" | "event" | "post";
+
+/** กำหนด start/due ของภารกิจตามช่วงเวลาและความสำคัญ — สอดคล้องรอบ 29 มี.ค. – 5 เม.ย. 2570 */
+export function scheduleTaskWindow(priority: TaskPriorityBand, index: number, phase: TaskPhase = "pre") {
+  if (phase === "post") return postEventSchedule(index);
+  if (phase === "event") return eventWeekSchedule(index);
   return preEventSchedule(priority, index);
 }

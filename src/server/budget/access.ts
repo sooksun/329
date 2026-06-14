@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { isGlobalTaskAdmin } from "@/server/auth/committee-access";
 import type { SessionUser } from "@/server/auth/session";
 
-export const FINANCE_COMMITTEE_NAME = "งบประมาณและการเงิน";
+export const FINANCE_COMMITTEE_NAME = "อำนวยการและการเงิน";
 
 export const isFinanceCommitteeMember = cache(async (userId: string, projectId: string) => {
   const link = await prisma.committeeMember.findFirst({

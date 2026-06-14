@@ -33,8 +33,8 @@ export default async function DashboardPage() {
     ["งาน 7 วันข้างหน้า", data.summary.next7DaysTasks.length, "ใกล้ถึงกำหนด"]
   ] as const;
 
-  const chartData = data.committeeStats.slice(2, 9).map((committee) => ({
-    name: committee.name.replace("และ", ""),
+  const chartData = data.committeeStats.map((committee) => ({
+    name: committee.name.replaceAll("และ", ""),
     planned: Math.round(committee.budgetPlanned / 1000),
     actual: Math.round(committee.budgetUsed / 1000)
   }));

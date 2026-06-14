@@ -12,19 +12,24 @@ describe("329 event calendar", () => {
   });
 
   it("schedules pre-event tasks before opening day", () => {
-    const { start, due } = scheduleTaskWindow("P0", 0, "ภาพรวมโครงการ");
+    const { start, due } = scheduleTaskWindow("P0", 0, "pre");
     expect(due.getTime()).toBeLessThan(EVENT_329.start.getTime());
     expect(start.getTime()).toBeLessThan(due.getTime());
   });
 
+  it("defaults to the pre-event window when no phase is given", () => {
+    const { due } = scheduleTaskWindow("P0", 0);
+    expect(due.getTime()).toBeLessThan(EVENT_329.start.getTime());
+  });
+
   it("schedules event-week tasks during 29 Mar – 5 Apr", () => {
-    const { start, due } = scheduleTaskWindow("P1", 0, "ปฏิบัติการวันงาน");
+    const { start, due } = scheduleTaskWindow("P1", 0, "event");
     expect(start.getTime()).toBeGreaterThanOrEqual(EVENT_329.start.getTime());
     expect(due.getTime()).toBeLessThanOrEqual(EVENT_329.end.getTime() + 86400000);
   });
 
   it("schedules post-event tasks after closing day", () => {
-    const { start } = scheduleTaskWindow("P3", 0, "สรุปผลและพัฒนาปีถัดไป");
+    const { start } = scheduleTaskWindow("P3", 0, "post");
     expect(start.getTime()).toBeGreaterThan(EVENT_329.end.getTime());
   });
 
