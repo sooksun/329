@@ -1,0 +1,66 @@
+name: yunnansports-329
+
+# เชื่อมต่อ MariaDB ภายนอกที่มีอยู่แล้ว (192.168.1.4:3306, database: yunnansports)
+# คำสั่งรัน (อ่าน secrets จาก .env.production):
+#   docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build
+#
+# DB ไม่ได้อยู่ใน compose นี้ — ตั้ง DATABASE_URL ใน .env.production ชี้ไป 192.168.1.4:3306
+
+services:
+  # ---------- Redis (cache + คิวสร้างรายงาน PowerPoint) ----------
+  redis:
+    image: redis:7-alpine
+    container_name: yunnansports-redis
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+
+  # ---------- เว็บแอป (Next.js) ----------
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: yunnansports-mis:latest
+    container_name: yunnansports-web
+    restart: unless-stopped
+    # ให้ container เข้าถึง MariaDB ที่ host LAN ได้ผ่านชื่อ host.docker.internal (ถ้าต้องใช้)
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    env_file:
+      - .env.production
+    environment:
+      # DB มี schema อยู่แล้ว — เปิดเป็น true เฉพาะตอนเปลี่ยน Prisma schema
+      RUN_DB_PUSH: "${RUN_DB_PUSH:-false}"
+      # ⚠️ true = ลบข้อมูลทั้งหมดแล้ว seed ใหม่ — ปกติให้ false เสมอ
+      RUN_SEED: "${RUN_SEED:-false}"
+    depends_on:
+      redis:
+        condition: service_started
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./storage:/app/storage # เก็บไฟล์อัปโหลด/รายงาน/log ให้คงอยู่บน host
+
+  # ---------- Worker คิวสร้างรายงาน (ใช้ image เดียวกับ web) ----------
+  worker:
+    image: yunnansports-mis:latest
+    container_name: yunnansports-worker
+    restart: unless-stopped
+    command: ["npm", "run", "worker:reports"]
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    env_file:
+      - .env.production
+    environment:
+      RUN_DB_PUSH: "false"
+      RUN_SEED: "false"
+    depends_on:
+      web:
+        condition: service_started
+      redis:
+        condition: service_started
+    volumes:
+      - ./storage:/app/storage
+
+volumes:
+  redis_data:

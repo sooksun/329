@@ -1,0 +1,35 @@
+# deps & build output (สร้างใหม่ใน image)
+node_modules
+.next
+
+# secrets & local env (ส่งผ่าน env_file ตอน runtime แทน)
+.env
+.env.local
+.env.development
+.env.production
+.env.test
+
+# vcs / editor / ai
+.git
+.gitignore
+.claude
+.vscode
+.idea
+
+# local databases & logs
+prisma/*.db
+prisma/*.db-journal
+*.log
+*.tsbuildinfo
+
+# runtime storage (map เป็น volume ตอน runtime)
+storage/uploads/*
+storage/backups/*
+storage/reports/*
+storage/logs/*
+
+# artifacts ที่ไม่ใช้ใน production image
+329MIS _Standalone_.html
+mobile_app
+tests
+docs
