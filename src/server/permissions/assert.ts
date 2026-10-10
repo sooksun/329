@@ -31,6 +31,18 @@ export function canViewTask(
   return canViewCommitteeTask(user, task, access);
 }
 
+/**
+ * รับรองผล (verified_progress / สถานะ VERIFIED) ได้เฉพาะผู้ตรวจ — global admin ของโปรเจกต์,
+ * ผู้มี evidence:review หรือผู้ตรวจที่กำหนดในภารกิจ (กันผู้แก้ทั่วไปปั๊ม 100 แล้วปิด DONE)
+ */
+export function canVerifyTask(
+  user: SessionUser,
+  task: { reviewer_id: string | null },
+  access: CommitteeAccessContext
+) {
+  return access.isGlobalAdmin || can(user.roles, permissions.evidenceReview) || user.id === task.reviewer_id;
+}
+
 export function canUploadEvidence(
   user: SessionUser,
   task: { committee_id: string; owner_id?: string | null },

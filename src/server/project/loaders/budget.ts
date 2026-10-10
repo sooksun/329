@@ -3,7 +3,7 @@ import { computeCommitteeStats, computeProjectSummary } from "@/server/project/c
 import { listBudgetItems } from "@/server/project/queries/budget";
 import { listCommittees } from "@/server/project/queries/committees";
 import { listRisks } from "@/server/project/queries/risks";
-import { listTasks } from "@/server/project/queries/tasks";
+import { listTaskSummaries } from "@/server/project/queries/tasks";
 import { listEvidence } from "@/server/project/queries/evidence";
 
 export async function getBudgetPageData() {
@@ -12,7 +12,7 @@ export async function getBudgetPageData() {
 
   const [committees, tasks, evidence, budgetItems, risks] = await Promise.all([
     listCommittees(project.id),
-    listTasks(project.id),
+    listTaskSummaries(project.id),
     listEvidence(project.id),
     listBudgetItems(project.id),
     listRisks(project.id)

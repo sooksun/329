@@ -34,11 +34,35 @@ class AppState extends ChangeNotifier {
   Future<void> restoreSession() async {
     final raw = await _storage.read(key: 'mock_session');
     if (raw != null) {
+      // ใช้ session cookie ที่เก็บไว้ — ไม่ login ซ้ำด้วยรหัสผ่าน (หมดอายุ → 401 → logout)
       final data = jsonDecode(raw) as Map<String, dynamic>;
-      final user = data['user'] as Map<String, dynamic>?;
-      final username = user?['username'] as String? ?? 'kl_staff';
-      final password = username == 'director' ? 'password123' : 'Pass329!';
-      await login(username, password, silent: true);
+      final user = data['user'] as Map<String, dynamic>? ?? const {};
+      final token = data['token'] as String?;
+      if (token != null && token.isNotEmpty) {
+        session = AuthSession(
+          token: token,
+          projectId: data['projectId'] as String? ?? '',
+          committees: (data['committees'] as List? ?? const [])
+              .map((c) => Committee(
+                    id: (c as Map)['id']?.toString() ?? '',
+                    name: c['name']?.toString() ?? '',
+                  ))
+              .toList(),
+          user: AppUser(
+            id: user['id'] as String? ?? '',
+            name: user['name'] as String? ?? '',
+            username: user['username'] as String? ?? '',
+            role: user['role'] as String? ?? 'Task Owner',
+          ),
+        );
+        try {
+          await _guard(refreshAll, silent: true);
+        } catch (_) {
+          // _guard จัดการ logout/ข้อความแล้ว
+        }
+      } else {
+        await _storage.delete(key: 'mock_session');
+      }
     }
     isBooting = false;
     notifyListeners();
@@ -53,6 +77,9 @@ class AppState extends ChangeNotifier {
         value: jsonEncode({
           'token': session!.token,
           'projectId': session!.projectId,
+          'committees': session!.committees
+              .map((c) => {'id': c.id, 'name': c.name})
+              .toList(),
           'user': {
             'id': session!.user.id,
             'name': session!.user.name,

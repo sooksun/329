@@ -1,13 +1,12 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { errors } from "@/lib/messages";
-import { can, permissions } from "@/lib/rbac";
 import { canMarkDone, validateTaskInput } from "@/lib/rules";
 import type { Priority, TaskStatus } from "@prisma/client";
 import { invalidateProjectCache } from "@/server/cache/invalidate";
 import { getCommitteeAccessContext } from "@/server/auth/committee-access";
 import { requireApiSession } from "@/server/auth/session";
-import { canUpdateTask, forbiddenResponse } from "@/server/permissions/assert";
+import { canUpdateTask, canVerifyTask, forbiddenResponse } from "@/server/permissions/assert";
 
 const taskStatuses = new Set<TaskStatus>(["NOT_STARTED", "IN_PROGRESS", "SUBMITTED", "REVISION_REQUIRED", "VERIFIED", "DONE", "DELAYED"]);
 
@@ -18,7 +17,10 @@ export async function PATCH(request: Request) {
 
   const id = new URL(request.url).pathname.split("/").pop();
   if (!id) return NextResponse.json({ error: errors.taskIdRequired }, { status: 400 });
-  const body = await request.json();
+  const body = await request.json().catch(() => null);
+  if (!body || typeof body !== "object") {
+    return NextResponse.json({ error: errors.dataInvalid }, { status: 400 });
+  }
   const task = await prisma.task.findUnique({ where: { id }, include: { evidence: true } });
   if (!task || task.deleted_at) return NextResponse.json({ error: errors.taskNotFound }, { status: 404 });
   const access = await getCommitteeAccessContext(user, task.project_id);
@@ -29,12 +31,15 @@ export async function PATCH(request: Request) {
   const nextStatus = String(body.status ?? task.status) as TaskStatus;
   const reportedProgress = Number(body.reported_progress ?? task.reported_progress);
   // verified_progress เป็นค่าที่ "ผู้ตรวจ" รับรอง — ผู้แก้ทั่วไปตั้งเองไม่ได้ (กันปั๊ม 100 แล้วปิด DONE)
-  const canSetVerified = access.isGlobalAdmin || can(user.roles, permissions.evidenceReview) || user.id === task.reviewer_id;
+  const canSetVerified = canVerifyTask(user, task, access);
   const verifiedProgress = canSetVerified ? Number(body.verified_progress ?? task.verified_progress) : task.verified_progress;
   const title = String(body.title ?? task.title).trim();
 
   if (!title) return NextResponse.json({ error: errors.taskTitleRequired }, { status: 400 });
   if (!taskStatuses.has(nextStatus)) return NextResponse.json({ error: errors.taskStatusInvalid }, { status: 400 });
+  if (nextStatus === "VERIFIED" && task.status !== "VERIFIED" && !canSetVerified) {
+    return forbiddenResponse(errors.verifyReviewerOnly);
+  }
   try {
     validateTaskInput({
       owner_id: task.owner_id,
@@ -71,6 +76,7 @@ export async function PATCH(request: Request) {
   });
   await prisma.auditLog.create({
     data: {
+      project_id: task.project_id,
       user_id: user.id,
       action: "Update task",
       entity_type: "Task",

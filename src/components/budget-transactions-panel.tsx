@@ -34,9 +34,11 @@ export function BudgetTransactionsPanel({
   const [loading, setLoading] = useState(false);
 
   async function addTransaction(event: React.FormEvent<HTMLFormElement>) {
+    // เก็บ form ไว้ก่อน await — React ตั้ง event.currentTarget เป็น null หลัง handler ทำงานเสร็จ
+    const formElement = event.currentTarget;
     event.preventDefault();
     setLoading(true);
-    const form = new FormData(event.currentTarget);
+    const form = new FormData(formElement);
     try {
       const response = await fetch(`/api/budget/items/${budgetItemId}/transactions`, {
         method: "POST",
@@ -48,7 +50,7 @@ export function BudgetTransactionsPanel({
         })
       });
       if (!response.ok) throw new Error(await readApiError(response, errors.saveFailed));
-      event.currentTarget.reset();
+      formElement.reset();
       toastSaved("บันทึกธุรกรรมแล้ว — ยอดใช้จริงอัปเดตจากรายการ PAID/VERIFIED");
       await reload();
       router.refresh();

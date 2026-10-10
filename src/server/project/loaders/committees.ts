@@ -4,7 +4,7 @@ import { listBudgetItems } from "@/server/project/queries/budget";
 import { listCommittees } from "@/server/project/queries/committees";
 import { listEvidence } from "@/server/project/queries/evidence";
 import { listRisks } from "@/server/project/queries/risks";
-import { listTasks } from "@/server/project/queries/tasks";
+import { listTaskSummaries } from "@/server/project/queries/tasks";
 
 export async function getCommitteesPageData() {
   const project = await getActiveProjectContext();
@@ -12,7 +12,7 @@ export async function getCommitteesPageData() {
 
   const [committees, tasks, evidence, budgetItems, risks] = await Promise.all([
     listCommittees(project.id),
-    listTasks(project.id),
+    listTaskSummaries(project.id),
     listEvidence(project.id),
     listBudgetItems(project.id),
     listRisks(project.id)

@@ -56,6 +56,7 @@ export async function POST(request: Request) {
     const comment = await createTaskComment(taskId, auth.user.id, String(body.body ?? ""));
     await prisma.auditLog.create({
       data: {
+        project_id: access.task.project_id,
         user_id: auth.user.id,
         action: "Create task comment",
         entity_type: "Comment",

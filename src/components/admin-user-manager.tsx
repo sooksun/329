@@ -26,9 +26,11 @@ export function AdminUserManager({
   const [saving, setSaving] = useState(false);
 
   async function createUser(event: React.FormEvent<HTMLFormElement>) {
+    // เก็บ form ไว้ก่อน await — React ตั้ง event.currentTarget เป็น null หลัง handler ทำงานเสร็จ
+    const formElement = event.currentTarget;
     event.preventDefault();
     setSaving(true);
-    const form = new FormData(event.currentTarget);
+    const form = new FormData(formElement);
     try {
       const response = await fetch("/api/users", {
         method: "POST",
@@ -45,7 +47,7 @@ export function AdminUserManager({
       const body = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(body.error ?? "สร้างผู้ใช้ไม่สำเร็จ");
       toastCreated(`สร้างผู้ใช้ ${body.username} แล้ว`);
-      event.currentTarget.reset();
+      formElement.reset();
       router.refresh();
     } catch (error) {
       toastError(error instanceof Error ? error.message : "สร้างผู้ใช้ไม่สำเร็จ");

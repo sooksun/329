@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -12,8 +13,9 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _username = TextEditingController(text: 'kl_staff');
-  final _password = TextEditingController(text: 'Pass329!');
+  // เติมบัญชีทดสอบเฉพาะ debug build — release ห้ามมีรหัสผ่านติดแอป
+  final _username = TextEditingController(text: kDebugMode ? 'kl_staff' : '');
+  final _password = TextEditingController(text: kDebugMode ? 'Pass329!' : '');
   bool _obscure = true;
 
   @override
@@ -39,11 +41,13 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  const Text(
-                    'เข้าสู่ระบบสำหรับคณะกรรมการ',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-                  ),
+                  if (kDebugMode)
+                    const Text(
+                      'เข้าสู่ระบบสำหรับคณะกรรมการ',
+                      textAlign: TextAlign.center,
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                    ),
                   const SizedBox(height: 32),
                   TextFormField(
                     controller: _username,
@@ -88,10 +92,11 @@ class _LoginScreenState extends State<LoginScreen> {
                         : const Text('เข้าสู่ระบบ'),
                   ),
                   const SizedBox(height: 16),
-                  const Text(
-                    'บัญชีทดสอบ: kl_staff / Pass329!',
-                    textAlign: TextAlign.center,
-                  ),
+                  if (kDebugMode)
+                    const Text(
+                      'บัญชีทดสอบ: kl_staff / Pass329!',
+                      textAlign: TextAlign.center,
+                    ),
                 ],
               ),
             ),

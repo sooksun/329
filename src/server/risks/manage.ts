@@ -10,6 +10,24 @@ export async function nextRiskCode(projectId: string) {
   return `RK-${String(count + 1).padStart(3, "0")}`;
 }
 
+/** กันผูกความเสี่ยงกับคณะ/ภารกิจของโปรเจกต์อื่นด้วย id */
+async function assertRiskRefsInProject(projectId: string, committeeId?: string, taskId?: string | null) {
+  if (committeeId) {
+    const committee = await prisma.committee.findFirst({
+      where: { id: committeeId, project_id: projectId, deleted_at: null },
+      select: { id: true }
+    });
+    if (!committee) throw new Error(errors.committeeNotFound);
+  }
+  if (taskId) {
+    const task = await prisma.task.findFirst({
+      where: { id: taskId, project_id: projectId, deleted_at: null },
+      select: { id: true }
+    });
+    if (!task) throw new Error(errors.taskNotFound);
+  }
+}
+
 export async function createRisk(input: {
   projectId: string;
   committeeId: string;
@@ -30,6 +48,7 @@ export async function createRisk(input: {
   const impact = Math.max(1, Math.min(5, Math.round(input.impact)));
   const { score, level } = computeRisk(likelihood, impact);
   const status = input.status && riskStatuses.has(input.status) ? input.status : "OPEN";
+  await assertRiskRefsInProject(input.projectId, input.committeeId, input.taskId);
 
   return prisma.risk.create({
     data: {
@@ -73,6 +92,7 @@ export async function updateRisk(
 ) {
   const existing = await prisma.risk.findFirst({ where: { id: riskId, project_id: projectId, deleted_at: null } });
   if (!existing) throw new Error(errors.riskNotFound);
+  await assertRiskRefsInProject(projectId, data.committee_id, data.task_id);
 
   const likelihood = data.likelihood !== undefined ? Math.max(1, Math.min(5, Math.round(data.likelihood))) : existing.likelihood;
   const impact = data.impact !== undefined ? Math.max(1, Math.min(5, Math.round(data.impact))) : existing.impact;

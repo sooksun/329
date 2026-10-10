@@ -31,7 +31,7 @@ export async function PATCH(request: Request) {
 
   const body = await request.json().catch(() => ({}));
   try {
-    const member = await updateCommitteeMember(memberId, committeeId, String(body.position ?? ""));
+    const member = await updateCommitteeMember(project.id, memberId, committeeId, String(body.position ?? ""));
     await invalidateProjectCache(project.id);
     return NextResponse.json(member);
   } catch (error) {
@@ -54,9 +54,10 @@ export async function DELETE(request: Request) {
   }
 
   try {
-    await removeCommitteeMember(memberId, committeeId);
+    await removeCommitteeMember(project.id, memberId, committeeId);
     await prisma.auditLog.create({
       data: {
+        project_id: project.id,
         user_id: auth.user.id,
         action: "Remove committee member",
         entity_type: "CommitteeMember",

@@ -62,12 +62,13 @@ export async function createBudgetTransaction(input: {
 }
 
 export async function updateBudgetTransaction(
+  projectId: string,
   transactionId: string,
   budgetItemId: string,
   data: { amount?: number; status?: BudgetStatus; note?: string | null }
 ) {
   const existing = await prisma.budgetTransaction.findFirst({
-    where: { id: transactionId, budget_item_id: budgetItemId }
+    where: { id: transactionId, budget_item_id: budgetItemId, budgetItem: { project_id: projectId } }
   });
   if (!existing) throw new Error("ไม่พบธุรกรรมงบประมาณ");
 
@@ -83,9 +84,9 @@ export async function updateBudgetTransaction(
   });
 }
 
-export async function deleteBudgetTransaction(transactionId: string, budgetItemId: string) {
+export async function deleteBudgetTransaction(projectId: string, transactionId: string, budgetItemId: string) {
   const existing = await prisma.budgetTransaction.findFirst({
-    where: { id: transactionId, budget_item_id: budgetItemId }
+    where: { id: transactionId, budget_item_id: budgetItemId, budgetItem: { project_id: projectId } }
   });
   if (!existing) throw new Error("ไม่พบธุรกรรมงบประมาณ");
   await prisma.budgetTransaction.delete({ where: { id: transactionId } });

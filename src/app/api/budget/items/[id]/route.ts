@@ -92,6 +92,7 @@ export async function PATCH(request: Request) {
   await rollupBudgetTotals(item.project_id);
   await prisma.auditLog.create({
     data: {
+      project_id: item.project_id,
       user_id: auth.user.id,
       action: "Update budget item",
       entity_type: "BudgetItem",

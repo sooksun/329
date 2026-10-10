@@ -6,7 +6,7 @@ import { isReportQueueEnabled } from "../src/server/queue/report-queue";
 describe("Phase 2 infrastructure", () => {
   it("builds stable cache keys", () => {
     expect(projectDashboardKey("p1")).toBe("mis:v1:project:p1:dashboard");
-    expect(projectShellKey("p1")).toBe("mis:v1:project:p1:shell");
+    expect(projectShellKey("p1")).toBe("mis:v1:project:p1:shell-summary");
   });
 
   it("defaults to local storage driver", () => {

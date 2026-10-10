@@ -52,9 +52,11 @@ export function CommitteeManager({
   }
 
   async function createCommittee(event: React.FormEvent<HTMLFormElement>) {
+    // เก็บ form ไว้ก่อน await — React ตั้ง event.currentTarget เป็น null หลัง handler ทำงานเสร็จ
+    const formElement = event.currentTarget;
     event.preventDefault();
     setLoading("create");
-    const form = new FormData(event.currentTarget);
+    const form = new FormData(formElement);
     try {
       await apiJson("/api/committees", {
         method: "POST",
@@ -69,7 +71,7 @@ export function CommitteeManager({
         })
       });
       toastCreated("สร้างคณะกรรมการแล้ว");
-      event.currentTarget.reset();
+      formElement.reset();
       router.refresh();
     } catch (error) {
       toastError(error instanceof Error ? error.message : errors.saveFailed);
@@ -120,9 +122,11 @@ export function CommitteeManager({
   }
 
   async function addMember(committeeId: string, event: React.FormEvent<HTMLFormElement>) {
+    // เก็บ form ไว้ก่อน await — React ตั้ง event.currentTarget เป็น null หลัง handler ทำงานเสร็จ
+    const formElement = event.currentTarget;
     event.preventDefault();
     setLoading(`member-${committeeId}`);
-    const form = new FormData(event.currentTarget);
+    const form = new FormData(formElement);
     try {
       await apiJson(`/api/committees/${committeeId}/members`, {
         method: "POST",
@@ -133,7 +137,7 @@ export function CommitteeManager({
         })
       });
       toastCreated("เพิ่มสมาชิกแล้ว");
-      event.currentTarget.reset();
+      formElement.reset();
       router.refresh();
     } catch (error) {
       toastError(error instanceof Error ? error.message : errors.saveFailed);

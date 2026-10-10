@@ -42,6 +42,7 @@ export async function PATCH(request: Request) {
     );
     await prisma.auditLog.create({
       data: {
+        project_id: project.id,
         user_id: auth.user.id,
         action: "Update committee",
         entity_type: "Committee",
@@ -74,6 +75,7 @@ export async function DELETE(request: Request) {
     await softDeleteCommittee(id, project.id, auth.user.id);
     await prisma.auditLog.create({
       data: {
+        project_id: project.id,
         user_id: auth.user.id,
         action: "Delete committee",
         entity_type: "Committee",

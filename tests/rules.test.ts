@@ -35,6 +35,11 @@ describe("329 MIS business rules", () => {
     expect(validateSubtaskInput({ title: "งานย่อย", reported_progress: 50, verified_progress: 80 })).toBe(true);
   });
 
+  it("rejects non-numeric progress (NaN from bad input)", () => {
+    expect(() => validateSubtaskInput({ title: "งานย่อย", reported_progress: Number("abc"), verified_progress: 0 })).toThrow();
+    expect(() => validateTaskInput({ owner_id: "u1", priority: "HIGH", start_date: new Date(), due_date: new Date(), reported_progress: 10, verified_progress: Number(undefined) })).toThrow();
+  });
+
   it("guards invalid dates and missing owners", () => {
     expect(() => validateTaskInput({ owner_id: null, priority: "HIGH", start_date: new Date(), due_date: new Date(), reported_progress: 20, verified_progress: 10 })).toThrow();
     expect(() => validateTaskInput({ owner_id: "u1", priority: "HIGH", start_date: new Date("2026-02-02"), due_date: new Date("2026-02-01"), reported_progress: 20, verified_progress: 10 })).toThrow();

@@ -93,8 +93,8 @@ export default async function BudgetPage({ searchParams }: BudgetPageProps) {
         }
         aside={
           <SectionCard title="รายการงบประมาณ">
-            <div className="max-h-[70vh] space-y-3 overflow-y-auto sm:max-h-none">
-              {budgetItems.slice(0, 14).map((item) => (
+            <div className="max-h-[70vh] space-y-3 overflow-y-auto">
+              {budgetItems.map((item) => (
                 <div className="rounded-md border p-3 hover:border-[#b68a2e]" key={item.id}>
                   <Link
                     href={item.task_id ? `/tasks/detail?id=${item.task_id}` : "/budget"}

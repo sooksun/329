@@ -96,6 +96,7 @@ export async function generatePptxForSnapshot(snapshotId: string, userId: string
 
   await prisma.auditLog.create({
     data: {
+      project_id: snapshot.project_id,
       user_id: userId,
       action: "Generate PowerPoint",
       entity_type: "PowerPointReport",

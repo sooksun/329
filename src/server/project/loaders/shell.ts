@@ -7,18 +7,16 @@ import { listAccessibleProjects } from "@/server/tenant/project-access";
 
 export async function getShellData() {
   const user = await getOptionalSessionUser();
+  if (!user) return null;
   const project = await getActiveProjectContext();
-  if (!project || !user) return null;
+  if (!project) return null;
 
-  const accessibleProjects = await listAccessibleProjects(user);
-
-  const summary = await getSummaryMetrics(project.id);
+  // cache เฉพาะ summary (ระดับโปรเจกต์) — รายการโปรเจกต์เป็นข้อมูลต่อผู้ใช้ ห้ามอยู่ใน key ระดับโปรเจกต์
+  const [summary, accessibleProjects] = await Promise.all([
+    withCache(projectShellKey(project.id), () => getSummaryMetrics(project.id)),
+    listAccessibleProjects(user)
+  ]);
   if (!summary) return null;
 
-  return withCache(projectShellKey(project.id), async () => ({
-    project,
-    summary,
-    accessibleProjects,
-    activeProjectId: project.id
-  }));
+  return { project, summary, accessibleProjects, activeProjectId: project.id };
 }

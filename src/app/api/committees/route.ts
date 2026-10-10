@@ -51,6 +51,7 @@ export async function POST(request: Request) {
     });
     await prisma.auditLog.create({
       data: {
+        project_id: project.id,
         user_id: auth.user.id,
         action: "Create committee",
         entity_type: "Committee",
