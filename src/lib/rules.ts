@@ -23,16 +23,21 @@ export function autoDelayStatus(status: TaskStatus, dueDate: Date, now = new Dat
   return dueDate.getTime() < now.getTime() ? "DELAYED" : status;
 }
 
+/** 0–100 และเป็นตัวเลขจริง — NaN (เช่น Number("abc")) ต้องไม่ผ่าน */
+function isPercent(value: number) {
+  return Number.isFinite(value) && value >= 0 && value <= 100;
+}
+
 export function validateSubtaskInput(input: {
   title: string;
   reported_progress: number;
   verified_progress: number;
 }) {
   if (!input.title.trim()) throw new Error(errors.subtaskTitleRequired);
-  if (input.reported_progress < 0 || input.reported_progress > 100) {
+  if (!isPercent(input.reported_progress)) {
     throw new Error(errors.reportedProgressRange);
   }
-  if (input.verified_progress < 0 || input.verified_progress > 100) {
+  if (!isPercent(input.verified_progress)) {
     throw new Error(errors.verifiedProgressRange);
   }
   return true;
@@ -50,8 +55,8 @@ export function validateTaskInput(input: {
   if (!input.owner_id) throw new Error(errors.taskOwnerRequired);
   if (input.start_date > input.due_date) throw new Error(errors.taskDateInvalid);
   if (input.is_critical && !input.due_date) throw new Error(errors.criticalTaskDueDate);
-  if (input.reported_progress < 0 || input.reported_progress > 100) throw new Error(errors.reportedProgressRange);
-  if (input.verified_progress < 0 || input.verified_progress > 100) throw new Error(errors.verifiedProgressRange);
+  if (!isPercent(input.reported_progress)) throw new Error(errors.reportedProgressRange);
+  if (!isPercent(input.verified_progress)) throw new Error(errors.verifiedProgressRange);
   return true;
 }
 

@@ -142,12 +142,13 @@ export async function addCommitteeMember(input: {
 }
 
 export async function updateCommitteeMember(
+  projectId: string,
   memberId: string,
   committeeId: string,
   position: string
 ) {
   const member = await prisma.committeeMember.findFirst({
-    where: { id: memberId, committee_id: committeeId }
+    where: { id: memberId, committee_id: committeeId, committee: { project_id: projectId } }
   });
   if (!member) throw new Error(errors.committeeMemberNotFound);
 
@@ -161,9 +162,9 @@ export async function updateCommitteeMember(
   });
 }
 
-export async function removeCommitteeMember(memberId: string, committeeId: string) {
+export async function removeCommitteeMember(projectId: string, memberId: string, committeeId: string) {
   const member = await prisma.committeeMember.findFirst({
-    where: { id: memberId, committee_id: committeeId }
+    where: { id: memberId, committee_id: committeeId, committee: { project_id: projectId } }
   });
   if (!member) throw new Error(errors.committeeMemberNotFound);
   await prisma.committeeMember.delete({ where: { id: memberId } });

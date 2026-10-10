@@ -25,6 +25,9 @@ export async function GET(request: Request) {
         exported_at: new Date().toISOString(),
         project: data.project,
         summary: data.summary,
+        // tasks/committees (id จริง) — แอปมือถือใช้ id เหล่านี้เรียก PATCH/comment/upload
+        committees: data.committees,
+        tasks: data.tasks,
         rows: data.rows
       },
       {

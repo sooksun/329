@@ -42,6 +42,15 @@ class DioMobileApi implements MobileApi {
       ),
     );
     _assertOk(loginResponse, allowAnonymous: true);
+    // next-auth ตอบ 200/302 แม้รหัสผิด — ดู ?error= ใน url/Location
+    final loginData = loginResponse.data;
+    final redirectUrl = loginData is Map
+        ? _str(loginData['url'])
+        : (loginResponse.headers.value('location') ?? '');
+    if (redirectUrl.contains('error=')) {
+      throw const ApiException('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง',
+          statusCode: 400);
+    }
     final cookie = [csrfCookie, _cookieHeaderFrom(loginResponse.headers)]
         .where((part) => part.isNotEmpty)
         .join('; ');
@@ -353,6 +362,10 @@ class DioMobileApi implements MobileApi {
   void _assertOk(Response<dynamic> response, {bool allowAnonymous = false}) {
     final status = response.statusCode ?? 0;
     if (status >= 200 && status < 300) return;
+    // redirect ไปหน้า login = session หมดอายุ → ให้ AppState logout (จัดการที่ 401)
+    if (!allowAnonymous && status >= 300 && status < 400) {
+      throw const ApiException('กรุณาเข้าสู่ระบบใหม่', statusCode: 401);
+    }
     final message = _messageFromResponse(response, status);
     throw ApiException(message, statusCode: status);
   }
@@ -402,8 +415,7 @@ class DioMobileApi implements MobileApi {
         final json = item as Map<String, dynamic>;
         return Committee(
             id: _str(json['id'] ?? json['name']),
-            name: _str(json['name'] ??
-                'เน€เธยเน€เธโ€เน€เธเธเน€เธยเน€เธเธเน€เธเธเน€เธเธเน€เธยเน€เธเธ’เน€เธเธ'));
+            name: _str(json['name'] ?? 'คณะกรรมการ'));
       }).toList();
     }
     final tasks = payload['tasks'] as List? ?? const [];
@@ -414,10 +426,8 @@ class DioMobileApi implements MobileApi {
           const {};
       final id = _str(committee['id'] ?? committee['name'] ?? '');
       if (id.isEmpty) continue;
-      byId[id] = Committee(
-          id: id,
-          name: _str(committee['name'] ??
-              'เน€เธยเน€เธโ€เน€เธเธเน€เธยเน€เธเธเน€เธเธเน€เธเธเน€เธยเน€เธเธ’เน€เธเธ'));
+      byId[id] =
+          Committee(id: id, name: _str(committee['name'] ?? 'คณะกรรมการ'));
     }
     return byId.values.toList();
   }
@@ -465,7 +475,7 @@ class DioMobileApi implements MobileApi {
         id: _str(committeeJson['id'] ?? ''),
         name: _str(committeeJson['name'] ?? ''),
       ),
-      ownerId: json['owner_id']?.to_str(),
+      ownerId: _strOrNull(json['owner_id']),
       dueDate: DateTime.tryParse(_str(json['due_date'] ?? '')) ??
           DateTime(2027, 3, 29),
       status: _statusFromApi(json['status']),
@@ -486,7 +496,7 @@ class DioMobileApi implements MobileApi {
     return Subtask(
       id: _str(json['id'] ?? ''),
       title: _str(json['title'] ?? ''),
-      ownerId: json['owner_id']?.to_str(),
+      ownerId: _strOrNull(json['owner_id']),
       status: _statusFromApi(json['status']),
       reportedProgress: _int(json['reported_progress']),
     );
@@ -500,17 +510,15 @@ class DioMobileApi implements MobileApi {
       createdAt:
           DateTime.tryParse(_str(json['created_at'] ?? '')) ?? DateTime.now(),
       reviewerName:
-          json['reviewer_name']?.to_str() ?? json['reviewed_by']?.to_str(),
-      rejectionReason: json['rejection_reason']?.to_str(),
+          _strOrNull(json['reviewer_name']) ?? _strOrNull(json['reviewed_by']),
+      rejectionReason: _strOrNull(json['rejection_reason']),
     );
   }
 
   TaskComment _commentFromJson(Map<String, dynamic> json) {
     return TaskComment(
       id: _str(json['id'] ?? ''),
-      authorName: _str(json['author_name'] ??
-          json['user_id'] ??
-          'เน€เธยเน€เธเธเน€เธยเน€เธยเน€เธยเน€เธย'),
+      authorName: _str(json['author_name'] ?? json['user_id'] ?? 'ผู้ใช้'),
       message: _str(json['body'] ?? json['message'] ?? ''),
       createdAt:
           DateTime.tryParse(_str(json['created_at'] ?? '')) ?? DateTime.now(),
@@ -571,6 +579,11 @@ class DioMobileApi implements MobileApi {
   int _int(dynamic value) {
     if (value is int) return value;
     return int.tryParse(_str(value)) ?? 0;
+  }
+
+  String? _strOrNull(dynamic value) {
+    final text = value?.toString();
+    return text == null || text.isEmpty ? null : text;
   }
 
   String _str(dynamic value) {

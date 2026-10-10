@@ -2,6 +2,7 @@ import { cache } from "react";
 import { can, permissions } from "@/lib/rbac";
 import type { SessionUser } from "@/server/auth/session";
 import { prisma } from "@/lib/prisma";
+import { userCanAccessProject } from "@/server/tenant/project-access";
 
 export type CommitteeAccessContext = {
   committeeIds: string[];
@@ -21,10 +22,9 @@ export const getUserCommitteeIds = cache(async (userId: string, projectId?: stri
 
 export async function getCommitteeAccessContext(user: SessionUser, projectId: string): Promise<CommitteeAccessContext> {
   const committeeIds = await getUserCommitteeIds(user.id, projectId);
-  return {
-    committeeIds,
-    isGlobalAdmin: isGlobalTaskAdmin(user)
-  };
+  // global admin มีผลเฉพาะโปรเจกต์ที่ตนเข้าถึงได้ — กัน Director องค์กร A แก้ข้อมูลองค์กร B ด้วย id
+  const isGlobalAdmin = isGlobalTaskAdmin(user) && (await userCanAccessProject(user, projectId));
+  return { committeeIds, isGlobalAdmin };
 }
 
 /** Super Admin, ประธานโครงการ, เลขานุการ — เห็นและแก้ไขได้ทุกคณะ */

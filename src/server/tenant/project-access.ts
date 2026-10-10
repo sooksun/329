@@ -1,6 +1,8 @@
 import { cache } from "react";
+import { cookies } from "next/headers";
 import type { Project } from "@prisma/client";
 import { can, permissions } from "@/lib/rbac";
+import { MIS_PROJECT_COOKIE } from "@/lib/tenant-cookies";
 import { prisma } from "@/lib/prisma";
 import { isGlobalTaskAdmin } from "@/server/auth/committee-access";
 import type { SessionUser } from "@/server/auth/session";
@@ -65,19 +67,17 @@ export const listAccessibleProjects = cache(async (user: SessionUser): Promise<A
     orgIds = [...new Set(fromCommittees.map((row) => row.committee.project.organization_id))];
   }
 
+  // ไม่สังกัดองค์กรใด = ไม่เห็นโปรเจกต์ใด (กัน Director/Secretary ที่ไม่มีองค์กรเห็นทุก tenant)
+  if (orgIds.length === 0) return [];
+
   if (isGlobalTaskAdmin(user)) {
     const rows = await prisma.project.findMany({
-      where: {
-        deleted_at: null,
-        ...(orgIds.length > 0 ? { organization_id: { in: orgIds } } : {})
-      },
+      where: { deleted_at: null, organization_id: { in: orgIds } },
       select: projectListSelect,
       orderBy: [{ created_at: "asc" }]
     });
     return sortAccessibleProjects(rows);
   }
-
-  if (orgIds.length === 0) return [];
 
   const committeeProjectIds = (
     await prisma.committeeMember.findMany({
@@ -114,8 +114,19 @@ export async function resolveActiveProjectId(user: SessionUser, requestedProject
   return pickDefaultProjectId(accessible);
 }
 
+async function readRequestedProjectId(): Promise<string | null> {
+  try {
+    const cookieStore = await cookies();
+    return cookieStore.get(MIS_PROJECT_COOKIE)?.value ?? null;
+  } catch {
+    // นอก request scope (script/worker/test) — ใช้โปรเจกต์ default
+    return null;
+  }
+}
+
+/** โปรเจกต์ที่ผู้ใช้เลือกไว้ใน cookie mis_project_id (ถ้ายังมีสิทธิ์) — ไม่งั้นใช้ default */
 export async function getActiveProjectForUser(user: SessionUser): Promise<Project | null> {
-  const projectId = await resolveActiveProjectId(user);
+  const projectId = await resolveActiveProjectId(user, await readRequestedProjectId());
   if (!projectId) return null;
   return prisma.project.findFirst({ where: { id: projectId, deleted_at: null } });
 }

@@ -38,7 +38,7 @@ export async function PATCH(request: Request) {
   const body = await request.json().catch(() => ({}));
 
   try {
-    const tx = await updateBudgetTransaction(transactionId, itemId, {
+    const tx = await updateBudgetTransaction(active.id, transactionId, itemId, {
       ...(body.amount !== undefined ? { amount: parseTransactionAmount(body.amount) } : {}),
       ...(body.status !== undefined ? { status: parseTransactionStatus(body.status) } : {}),
       ...(body.note !== undefined ? { note: body.note === null ? null : String(body.note) } : {})
@@ -64,10 +64,11 @@ export async function DELETE(request: Request) {
 
   const { itemId, transactionId } = idsFromUrl(request);
   try {
-    await deleteBudgetTransaction(transactionId, itemId);
+    await deleteBudgetTransaction(active.id, transactionId, itemId);
     await afterBudgetTransactionChange(active.id, itemId);
     await prisma.auditLog.create({
       data: {
+        project_id: active.id,
         user_id: auth.user.id,
         action: "Delete budget transaction",
         entity_type: "BudgetTransaction",

@@ -31,6 +31,22 @@ export async function listTasks(projectId: string) {
   });
 }
 
+/**
+ * รายการภารกิจแบบเบา (committee + owner + evidence) สำหรับสถิติ/timeline —
+ * ไม่ดึง subtasks→evidence→fileAsset, comments, budgetItems, risks เหมือน listTasks
+ */
+export async function listTaskSummaries(projectId: string) {
+  return prisma.task.findMany({
+    where: { project_id: projectId, deleted_at: null },
+    include: {
+      committee: true,
+      owner: { select: { id: true, name: true } },
+      evidence: { where: { deleted_at: null } }
+    },
+    orderBy: [{ committee_id: "asc" }, { due_date: "asc" }]
+  });
+}
+
 export async function listTasksForEvidenceForm(projectId: string) {
   return prisma.task.findMany({
     where: { project_id: projectId, deleted_at: null },

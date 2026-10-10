@@ -7,6 +7,7 @@ import { authOptions } from "@/lib/auth";
 import { can, permissions } from "@/lib/rbac";
 import { getSessionUser } from "@/server/auth/session";
 import { listAuditLogs } from "@/server/audit/list";
+import { getActiveProjectForUser } from "@/server/tenant/project-access";
 import { prisma } from "@/lib/prisma";
 
 export default async function AuditLogPage() {
@@ -17,7 +18,14 @@ export default async function AuditLogPage() {
     redirect("/dashboard");
   }
 
-  const logs = await listAuditLogs({ limit: 100 });
+  const project = await getActiveProjectForUser(user);
+  if (!project) redirect("/dashboard");
+
+  const logs = await listAuditLogs({
+    projectId: project.id,
+    includeGlobal: can(user.roles, permissions.admin),
+    limit: 100
+  });
   const userIds = [...new Set(logs.map((l) => l.user_id).filter(Boolean) as string[])];
   const users = userIds.length
     ? await prisma.user.findMany({ where: { id: { in: userIds } }, select: { id: true, name: true, username: true } })

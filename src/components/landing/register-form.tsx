@@ -10,10 +10,12 @@ export function RegisterForm() {
   const [loading, setLoading] = useState(false);
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
+    // เก็บ form ไว้ก่อน await — React ตั้ง event.currentTarget เป็น null หลัง handler ทำงานเสร็จ
+    const formElement = event.currentTarget;
     event.preventDefault();
     setLoading(true);
 
-    const form = new FormData(event.currentTarget);
+    const form = new FormData(formElement);
     const village = String(form.get("village") ?? "").trim();
     const contactName = String(form.get("contactName") ?? "").trim();
     const phone = String(form.get("phone") ?? "").trim();
@@ -27,7 +29,7 @@ export function RegisterForm() {
     await new Promise((resolve) => setTimeout(resolve, 400));
     setLoading(false);
     toastInfo("รับแจ้งความประสงค์แล้ว — คณะกรรมการจะติดต่อกลับเมื่อเปิดรับลงทะเบียนอย่างเป็นทางการ");
-    event.currentTarget.reset();
+    formElement.reset();
   }
 
   return (

@@ -1,5 +1,6 @@
+import { prisma } from "@/lib/prisma";
 import { getActiveProjectContext } from "@/server/project/active-project";
-import { getTaskById, listTasks } from "@/server/project/queries/tasks";
+import { getTaskById } from "@/server/project/queries/tasks";
 
 export async function getTaskDetailPageData(taskId?: string) {
   const project = await getActiveProjectContext();
@@ -10,8 +11,12 @@ export async function getTaskDetailPageData(taskId?: string) {
     if (task && task.project_id === project.id) return { project: { id: project.id }, task };
   }
 
-  const tasks = await listTasks(project.id);
-  const first = tasks[0];
+  // ไม่มี id (หรือ id ไม่อยู่ในโปรเจกต์) → ภารกิจแรกตามลำดับเดียวกับ listTasks — ดึงแค่ id ไม่โหลดทั้งตาราง
+  const first = await prisma.task.findFirst({
+    where: { project_id: project.id, deleted_at: null },
+    orderBy: [{ committee_id: "asc" }, { due_date: "asc" }],
+    select: { id: true }
+  });
   if (!first) return null;
   const task = await getTaskById(first.id);
   if (!task) return null;

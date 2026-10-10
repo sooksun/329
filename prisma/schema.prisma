@@ -66,14 +66,14 @@ enum StorageProvider {
 }
 
 model Organization {
-  id          String               @id @default(cuid())
-  slug        String               @unique
-  name        String
-  projects    Project[]
-  members     OrganizationMember[]
-  created_at  DateTime             @default(now())
-  updated_at  DateTime             @updatedAt
-  deleted_at  DateTime?
+  id         String               @id @default(cuid())
+  slug       String               @unique
+  name       String
+  projects   Project[]
+  members    OrganizationMember[]
+  created_at DateTime             @default(now())
+  updated_at DateTime             @updatedAt
+  deleted_at DateTime?
 }
 
 model OrganizationMember {
@@ -88,21 +88,21 @@ model OrganizationMember {
 }
 
 model User {
-  id              String            @id @default(cuid())
-  name            String
-  username        String            @unique
-  email           String?           @unique
-  password_hash   String
-  image           String?
-  roles           UserRole[]
-  orgMemberships  OrganizationMember[]
-  committeeLinks  CommitteeMember[]
-  ownedTasks      Task[]            @relation("TaskOwner")
-  reviewedTasks   Task[]            @relation("TaskReviewer")
-  assignedSubtasks Subtask[]        @relation("SubtaskOwner")
-  created_at      DateTime          @default(now())
-  updated_at      DateTime          @updatedAt
-  deleted_at      DateTime?
+  id               String               @id @default(cuid())
+  name             String
+  username         String               @unique
+  email            String?              @unique
+  password_hash    String
+  image            String?
+  roles            UserRole[]
+  orgMemberships   OrganizationMember[]
+  committeeLinks   CommitteeMember[]
+  ownedTasks       Task[]               @relation("TaskOwner")
+  reviewedTasks    Task[]               @relation("TaskReviewer")
+  assignedSubtasks Subtask[]            @relation("SubtaskOwner")
+  created_at       DateTime             @default(now())
+  updated_at       DateTime             @updatedAt
+  deleted_at       DateTime?
 }
 
 model Role {
@@ -114,10 +114,10 @@ model Role {
 }
 
 model Permission {
-  id          String           @id @default(cuid())
-  key         String           @unique
-  label       String
-  roles       RolePermission[]
+  id    String           @id @default(cuid())
+  key   String           @unique
+  label String
+  roles RolePermission[]
 }
 
 model UserRole {
@@ -139,65 +139,65 @@ model RolePermission {
 }
 
 model Project {
-  id                 String              @id @default(cuid())
-  organization_id    String
-  slug               String?
-  name               String
-  edition            String
-  description        String?
-  event_date         DateTime
-  event_end_date     DateTime?
-  organization       Organization        @relation(fields: [organization_id], references: [id])
-  planned_budget     Float               @default(0)
-  actual_budget      Float               @default(0)
-  reported_progress  Int                 @default(0)
-  evidence_progress  Int                 @default(0)
-  verified_progress  Int                 @default(0)
-  committees         Committee[]
-  plans              Plan[]
-  tasks              Task[]
-  evidence           Evidence[]
-  fileAssets         FileAsset[]
-  budgetItems        BudgetItem[]
-  risks              Risk[]
-  meetings           Meeting[]
-  snapshots          DashboardSnapshot[]
-  reports            PowerPointReport[]
-  reportJobs         ReportGenerationJob[]
-  notifications      Notification[]
-  created_at         DateTime            @default(now())
-  updated_at         DateTime            @updatedAt
-  created_by         String?
-  updated_by         String?
-  deleted_at         DateTime?
+  id                String                @id @default(cuid())
+  organization_id   String
+  slug              String?
+  name              String
+  edition           String
+  description       String?               @db.Text
+  event_date        DateTime
+  event_end_date    DateTime?
+  organization      Organization          @relation(fields: [organization_id], references: [id])
+  planned_budget    Float                 @default(0)
+  actual_budget     Float                 @default(0)
+  reported_progress Int                   @default(0)
+  evidence_progress Int                   @default(0)
+  verified_progress Int                   @default(0)
+  committees        Committee[]
+  plans             Plan[]
+  tasks             Task[]
+  evidence          Evidence[]
+  fileAssets        FileAsset[]
+  budgetItems       BudgetItem[]
+  risks             Risk[]
+  meetings          Meeting[]
+  snapshots         DashboardSnapshot[]
+  reports           PowerPointReport[]
+  reportJobs        ReportGenerationJob[]
+  notifications     Notification[]
+  created_at        DateTime              @default(now())
+  updated_at        DateTime              @updatedAt
+  created_by        String?
+  updated_by        String?
+  deleted_at        DateTime?
 
   @@unique([organization_id, slug])
   @@index([organization_id])
 }
 
 model Committee {
-  id                 String            @id @default(cuid())
-  project_id         String
-  name               String
-  owner_name         String
-  owner_initials     String
-  sort_order         Int               @default(0)
-  risk_level         String            @default("Low")
-  planned_budget     Float             @default(0)
-  actual_budget      Float             @default(0)
-  verified_progress  Int               @default(0)
-  project            Project           @relation(fields: [project_id], references: [id])
-  members            CommitteeMember[]
-  plans              Plan[]
-  tasks              Task[]
-  evidence           Evidence[]
-  budgetItems        BudgetItem[]
-  risks              Risk[]
-  created_at         DateTime          @default(now())
-  updated_at         DateTime          @updatedAt
-  created_by         String?
-  updated_by         String?
-  deleted_at         DateTime?
+  id                String            @id @default(cuid())
+  project_id        String
+  name              String
+  owner_name        String
+  owner_initials    String
+  sort_order        Int               @default(0)
+  risk_level        String            @default("Low")
+  planned_budget    Float             @default(0)
+  actual_budget     Float             @default(0)
+  verified_progress Int               @default(0)
+  project           Project           @relation(fields: [project_id], references: [id])
+  members           CommitteeMember[]
+  plans             Plan[]
+  tasks             Task[]
+  evidence          Evidence[]
+  budgetItems       BudgetItem[]
+  risks             Risk[]
+  created_at        DateTime          @default(now())
+  updated_at        DateTime          @updatedAt
+  created_by        String?
+  updated_by        String?
+  deleted_at        DateTime?
 }
 
 model CommitteeMember {
@@ -210,93 +210,95 @@ model CommitteeMember {
 }
 
 model Plan {
-  id                 String       @id @default(cuid())
-  project_id         String
-  committee_id       String
-  name               String
-  description        String?
-  weight             Float        @default(1)
-  reported_progress  Int          @default(0)
-  evidence_progress  Int          @default(0)
-  verified_progress  Int          @default(0)
-  project            Project      @relation(fields: [project_id], references: [id])
-  committee          Committee    @relation(fields: [committee_id], references: [id])
-  tasks              Task[]
-  budgetItems        BudgetItem[]
-  created_at         DateTime     @default(now())
-  updated_at         DateTime     @updatedAt
-  created_by         String?
-  updated_by         String?
-  deleted_at         DateTime?
+  id                String       @id @default(cuid())
+  project_id        String
+  committee_id      String
+  name              String
+  description       String?      @db.Text
+  weight            Float        @default(1)
+  reported_progress Int          @default(0)
+  evidence_progress Int          @default(0)
+  verified_progress Int          @default(0)
+  project           Project      @relation(fields: [project_id], references: [id])
+  committee         Committee    @relation(fields: [committee_id], references: [id])
+  tasks             Task[]
+  budgetItems       BudgetItem[]
+  created_at        DateTime     @default(now())
+  updated_at        DateTime     @updatedAt
+  created_by        String?
+  updated_by        String?
+  deleted_at        DateTime?
 }
 
 model Task {
-  id                 String           @id @default(cuid())
-  project_id         String
-  committee_id       String
-  plan_id            String
-  code               String           @unique
-  title              String
-  description        String?
-  success_criteria   String
-  status             TaskStatus       @default(NOT_STARTED)
-  priority           Priority         @default(MEDIUM)
-  weight             Float            @default(1)
-  start_date         DateTime
-  due_date           DateTime
-  owner_id           String?
-  reviewer_id        String?
-  reported_progress  Int              @default(0)
-  evidence_progress  Int              @default(0)
-  verified_progress  Int              @default(0)
-  is_critical        Boolean          @default(false)
-  project            Project          @relation(fields: [project_id], references: [id])
-  committee          Committee        @relation(fields: [committee_id], references: [id])
-  plan               Plan             @relation(fields: [plan_id], references: [id])
-  owner              User?            @relation("TaskOwner", fields: [owner_id], references: [id])
-  reviewer           User?            @relation("TaskReviewer", fields: [reviewer_id], references: [id])
-  subtasks           Subtask[]
-  dependencies       TaskDependency[] @relation("TaskDependsOn")
-  dependents         TaskDependency[] @relation("TaskDependent")
-  evidence           Evidence[]
-  budgetItems        BudgetItem[]
-  risks              Risk[]
-  comments           Comment[]
-  actionItems        MeetingActionItem[]
-  created_at         DateTime         @default(now())
-  updated_at         DateTime         @updatedAt
-  created_by         String?
-  updated_by         String?
-  deleted_at         DateTime?
+  id                String              @id @default(cuid())
+  project_id        String
+  committee_id      String
+  plan_id           String
+  code              String              @unique
+  title             String
+  description       String?             @db.Text
+  success_criteria  String              @db.Text
+  status            TaskStatus          @default(NOT_STARTED)
+  priority          Priority            @default(MEDIUM)
+  weight            Float               @default(1)
+  start_date        DateTime
+  due_date          DateTime
+  owner_id          String?
+  reviewer_id       String?
+  reported_progress Int                 @default(0)
+  evidence_progress Int                 @default(0)
+  verified_progress Int                 @default(0)
+  is_critical       Boolean             @default(false)
+  project           Project             @relation(fields: [project_id], references: [id])
+  committee         Committee           @relation(fields: [committee_id], references: [id])
+  plan              Plan                @relation(fields: [plan_id], references: [id])
+  owner             User?               @relation("TaskOwner", fields: [owner_id], references: [id])
+  reviewer          User?               @relation("TaskReviewer", fields: [reviewer_id], references: [id])
+  subtasks          Subtask[]
+  dependencies      TaskDependency[]    @relation("TaskDependsOn")
+  dependents        TaskDependency[]    @relation("TaskDependent")
+  evidence          Evidence[]
+  budgetItems       BudgetItem[]
+  risks             Risk[]
+  comments          Comment[]
+  actionItems       MeetingActionItem[]
+  created_at        DateTime            @default(now())
+  updated_at        DateTime            @updatedAt
+  created_by        String?
+  updated_by        String?
+  deleted_at        DateTime?
+
+  @@index([project_id, deleted_at, status])
 }
 
 model Subtask {
-  id                 String     @id @default(cuid())
-  task_id            String
-  owner_id           String?
-  title              String
-  notes              String?    @db.Text
-  status             TaskStatus @default(NOT_STARTED)
-  weight             Float      @default(1)
-  reported_progress  Int        @default(0)
-  evidence_progress  Int        @default(0)
-  verified_progress  Int        @default(0)
-  task               Task       @relation(fields: [task_id], references: [id])
-  owner              User?      @relation("SubtaskOwner", fields: [owner_id], references: [id])
-  evidence           Evidence[]
-  created_at         DateTime   @default(now())
-  updated_at         DateTime   @updatedAt
-  created_by         String?
-  updated_by         String?
-  deleted_at         DateTime?
+  id                String     @id @default(cuid())
+  task_id           String
+  owner_id          String?
+  title             String
+  notes             String?    @db.Text
+  status            TaskStatus @default(NOT_STARTED)
+  weight            Float      @default(1)
+  reported_progress Int        @default(0)
+  evidence_progress Int        @default(0)
+  verified_progress Int        @default(0)
+  task              Task       @relation(fields: [task_id], references: [id])
+  owner             User?      @relation("SubtaskOwner", fields: [owner_id], references: [id])
+  evidence          Evidence[]
+  created_at        DateTime   @default(now())
+  updated_at        DateTime   @updatedAt
+  created_by        String?
+  updated_by        String?
+  deleted_at        DateTime?
 }
 
 model TaskDependency {
-  id             String @id @default(cuid())
-  task_id        String
-  depends_on_id  String
-  task           Task   @relation("TaskDependsOn", fields: [task_id], references: [id])
-  dependsOn      Task   @relation("TaskDependent", fields: [depends_on_id], references: [id])
+  id            String @id @default(cuid())
+  task_id       String
+  depends_on_id String
+  task          Task   @relation("TaskDependsOn", fields: [task_id], references: [id])
+  dependsOn     Task   @relation("TaskDependent", fields: [depends_on_id], references: [id])
 
   @@unique([task_id, depends_on_id])
 }
@@ -314,7 +316,7 @@ model Evidence {
   before_after_group String?
   reviewed_by        String?
   reviewed_at        DateTime?
-  rejection_reason   String?
+  rejection_reason   String?        @db.Text
   project            Project        @relation(fields: [project_id], references: [id])
   committee          Committee      @relation(fields: [committee_id], references: [id])
   task               Task?          @relation(fields: [task_id], references: [id])
@@ -325,23 +327,25 @@ model Evidence {
   created_by         String?
   updated_by         String?
   deleted_at         DateTime?
+
+  @@index([project_id, status])
 }
 
 model FileAsset {
-  id                String           @id @default(cuid())
+  id                String          @id @default(cuid())
   project_id        String
-  uuid_filename     String           @unique
+  uuid_filename     String          @unique
   original_filename String
   mime_type         String
   byte_size         Int
   sha256_hash       String
   storage_key       String
-  storage_provider  StorageProvider  @default(LOCAL)
-  is_private        Boolean          @default(true)
-  project           Project    @relation(fields: [project_id], references: [id])
+  storage_provider  StorageProvider @default(LOCAL)
+  is_private        Boolean         @default(true)
+  project           Project         @relation(fields: [project_id], references: [id])
   evidence          Evidence[]
-  created_at        DateTime   @default(now())
-  updated_at        DateTime   @updatedAt
+  created_at        DateTime        @default(now())
+  updated_at        DateTime        @updatedAt
   created_by        String?
   updated_by        String?
   deleted_at        DateTime?
@@ -350,42 +354,42 @@ model FileAsset {
 }
 
 model BudgetItem {
-  id                 String              @id @default(cuid())
-  project_id         String
-  committee_id       String
-  plan_id            String?
-  task_id            String?
-  title              String
-  category           String
-  receipt_no         String?
-  planned_amount     Float               @default(0)
-  requested_amount   Float               @default(0)
-  approved_amount    Float               @default(0)
-  committed_amount   Float               @default(0)
-  actual_amount      Float               @default(0)
-  status             BudgetStatus        @default(DRAFT)
-  project            Project             @relation(fields: [project_id], references: [id])
-  committee          Committee           @relation(fields: [committee_id], references: [id])
-  plan               Plan?               @relation(fields: [plan_id], references: [id])
-  task               Task?               @relation(fields: [task_id], references: [id])
-  transactions       BudgetTransaction[]
-  created_at         DateTime            @default(now())
-  updated_at         DateTime            @updatedAt
-  created_by         String?
-  updated_by         String?
-  deleted_at         DateTime?
+  id               String              @id @default(cuid())
+  project_id       String
+  committee_id     String
+  plan_id          String?
+  task_id          String?
+  title            String
+  category         String
+  receipt_no       String?
+  planned_amount   Float               @default(0)
+  requested_amount Float               @default(0)
+  approved_amount  Float               @default(0)
+  committed_amount Float               @default(0)
+  actual_amount    Float               @default(0)
+  status           BudgetStatus        @default(DRAFT)
+  project          Project             @relation(fields: [project_id], references: [id])
+  committee        Committee           @relation(fields: [committee_id], references: [id])
+  plan             Plan?               @relation(fields: [plan_id], references: [id])
+  task             Task?               @relation(fields: [task_id], references: [id])
+  transactions     BudgetTransaction[]
+  created_at       DateTime            @default(now())
+  updated_at       DateTime            @updatedAt
+  created_by       String?
+  updated_by       String?
+  deleted_at       DateTime?
 
   @@unique([project_id, receipt_no])
 }
 
 model BudgetTransaction {
-  id             String     @id @default(cuid())
+  id             String       @id @default(cuid())
   budget_item_id String
   amount         Float
   status         BudgetStatus
-  note           String?
-  budgetItem     BudgetItem @relation(fields: [budget_item_id], references: [id])
-  created_at     DateTime   @default(now())
+  note           String?      @db.Text
+  budgetItem     BudgetItem   @relation(fields: [budget_item_id], references: [id])
+  created_at     DateTime     @default(now())
   created_by     String?
 }
 
@@ -394,14 +398,14 @@ model Risk {
   project_id       String
   committee_id     String
   task_id          String?
-  code             String     @unique
+  code             String
   title            String
   likelihood       Int
   impact           Int
   score            Int
   level            String
-  mitigation_plan  String
-  contingency_plan String
+  mitigation_plan  String     @db.Text
+  contingency_plan String     @db.Text
   owner_name       String
   owner_initials   String
   status           RiskStatus @default(OPEN)
@@ -413,6 +417,8 @@ model Risk {
   created_by       String?
   updated_by       String?
   deleted_at       DateTime?
+
+  @@unique([project_id, code])
 }
 
 model Meeting {
@@ -420,8 +426,8 @@ model Meeting {
   project_id  String
   title       String
   meeting_at  DateTime
-  notes       String
-  decisions   String
+  notes       String              @db.Text
+  decisions   String              @db.Text
   project     Project             @relation(fields: [project_id], references: [id])
   agendas     MeetingAgenda[]
   actionItems MeetingActionItem[]
@@ -444,7 +450,7 @@ model MeetingActionItem {
   id                  String     @id @default(cuid())
   meeting_id          String
   decision_title      String
-  description         String
+  description         String     @db.Text
   owner_name          String
   due_date            DateTime
   linked_committee_id String?
@@ -455,14 +461,14 @@ model MeetingActionItem {
 }
 
 model DashboardSnapshot {
-  id             String             @id @default(cuid())
-  project_id     String
-  title          String
-  data           String             @db.LongText
-  created_by     String
-  project        Project            @relation(fields: [project_id], references: [id])
-  reports        PowerPointReport[]
-  created_at     DateTime           @default(now())
+  id         String             @id @default(cuid())
+  project_id String
+  title      String
+  data       String             @db.LongText
+  created_by String
+  project    Project            @relation(fields: [project_id], references: [id])
+  reports    PowerPointReport[]
+  created_at DateTime           @default(now())
 }
 
 model PowerPointReport {
@@ -494,29 +500,46 @@ model ReportGenerationJob {
 }
 
 model Notification {
-  id         String    @id @default(cuid())
+  id         String             @id @default(cuid())
   project_id String
   user_id    String?
   title      String
-  body       String
+  body       String             @db.Text
   read_at    DateTime?
-  project    Project   @relation(fields: [project_id], references: [id])
-  created_at DateTime  @default(now())
+  reads      NotificationRead[]
+  project    Project            @relation(fields: [project_id], references: [id])
+  created_at DateTime           @default(now())
+
+  @@index([project_id, user_id, created_at])
+}
+
+/// สถานะ "อ่านแล้ว" ต่อผู้ใช้ — แจ้งเตือนรวม (user_id = null) อ่านแยกกันได้
+model NotificationRead {
+  id              String       @id @default(cuid())
+  notification_id String
+  user_id         String
+  read_at         DateTime     @default(now())
+  notification    Notification @relation(fields: [notification_id], references: [id], onDelete: Cascade)
+
+  @@unique([notification_id, user_id])
 }
 
 model Comment {
-  id         String   @id @default(cuid())
+  id         String    @id @default(cuid())
   task_id    String
   user_id    String?
-  body       String
-  task       Task     @relation(fields: [task_id], references: [id])
-  created_at DateTime @default(now())
+  body       String    @db.Text
+  task       Task      @relation(fields: [task_id], references: [id])
+  created_at DateTime  @default(now())
   deleted_at DateTime?
+
+  @@index([task_id, created_at])
 }
 
 model AuditLog {
   id          String   @id @default(cuid())
   user_id     String?
+  project_id  String?
   action      String
   entity_type String
   entity_id   String
@@ -524,4 +547,6 @@ model AuditLog {
   new_value   String?  @db.LongText
   ip_address  String?
   created_at  DateTime @default(now())
+
+  @@index([project_id, created_at])
 }

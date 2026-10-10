@@ -63,6 +63,7 @@ export async function POST(request: Request) {
     const dep = await addTaskDependency(taskId, dependsOnId, access.task.project_id);
     await prisma.auditLog.create({
       data: {
+        project_id: access.task.project_id,
         user_id: auth.user.id,
         action: "Add task dependency",
         entity_type: "TaskDependency",

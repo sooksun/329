@@ -27,6 +27,7 @@ export async function POST() {
   });
   await prisma.auditLog.create({
     data: {
+      project_id: payload.project.id,
       user_id: auth.user.id,
       action: "Create dashboard snapshot",
       entity_type: "DashboardSnapshot",

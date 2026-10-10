@@ -133,6 +133,7 @@ export async function resetProjectOperationalData(projectId: string, actorId: st
   // บันทึกการรีเซ็ตลง AuditLog (นอก transaction — ไม่ถูกลบไปด้วย)
   await prisma.auditLog.create({
     data: {
+      project_id: projectId,
       user_id: actorId,
       action: "Reset project data (go-live)",
       entity_type: "Project",

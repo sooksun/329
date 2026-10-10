@@ -86,6 +86,7 @@ export async function POST(request: Request) {
     await afterBudgetTransactionChange(active.id, itemId);
     await prisma.auditLog.create({
       data: {
+        project_id: active.id,
         user_id: auth.user.id,
         action: "Create budget transaction",
         entity_type: "BudgetTransaction",

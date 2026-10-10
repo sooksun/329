@@ -17,6 +17,8 @@ function filterHref(key: string, value?: string, current?: TaskBoardFilters) {
   return `/tasks${params.toString() ? `?${params.toString()}` : ""}`;
 }
 
+const KANBAN_COLUMN_LIMIT = 12;
+
 function statusTone(status: string) {
   if (status === "DELAYED") return "text-[#b91528]";
   if (status === "DONE" || status === "VERIFIED") return "text-[#107c41]";
@@ -91,7 +93,10 @@ export function TasksBoard({
       {/* Desktop: Kanban */}
       <div className="hidden gap-3 lg:grid lg:grid-cols-4 xl:grid-cols-7">
         {TASK_BOARD_STATUSES.map((status) => {
-          const columnTasks = tasks.filter((task) => task.status === status).slice(0, 12);
+          // ตัดที่ 12 ใบต่อคอลัมน์เพื่อไม่ให้หน้ายาว — เลือกกรองสถานะนั้นแล้วแสดงครบ และนับจำนวนจริงเสมอ
+          const allInColumn = tasks.filter((task) => task.status === status);
+          const columnTasks = filters.status === status ? allInColumn : allInColumn.slice(0, KANBAN_COLUMN_LIMIT);
+          const hidden = allInColumn.length - columnTasks.length;
           return (
             <section key={status} className="min-w-0">
               <Link
@@ -99,12 +104,20 @@ export function TasksBoard({
                 className="mb-3 flex min-h-[44px] items-center justify-between rounded-md bg-[#f0eee7] px-3 py-2 font-black hover:bg-[#e7e2d7]"
               >
                 <span className={statusTone(status)}>{thaiStatus(status)}</span>
-                <span className="rounded-full bg-white/80 px-2 py-0.5 text-xs">{columnTasks.length}</span>
+                <span className="rounded-full bg-white/80 px-2 py-0.5 text-xs">{allInColumn.length}</span>
               </Link>
               <div className="space-y-3">
                 {columnTasks.map((task) => (
                   <TaskCard key={task.id} task={task} compact />
                 ))}
+                {hidden > 0 ? (
+                  <Link
+                    href={filterHref("status", status, filters)}
+                    className="block rounded-md border border-dashed px-3 py-2 text-center text-xs font-bold text-[#123f76] hover:bg-[#f0eee7]"
+                  >
+                    ดูอีก {hidden} รายการ
+                  </Link>
+                ) : null}
               </div>
             </section>
           );

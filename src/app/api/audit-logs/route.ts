@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { listAuditLogs } from "@/server/audit/list";
 import { requireApiSession } from "@/server/auth/session";
 import { forbiddenResponse } from "@/server/permissions/assert";
+import { getActiveProjectForUser } from "@/server/tenant/project-access";
 
 export async function GET(request: Request) {
   const auth = await requireApiSession();
@@ -17,7 +18,15 @@ export async function GET(request: Request) {
   const entityType = url.searchParams.get("entity_type")?.trim() || undefined;
   const limit = Number(url.searchParams.get("limit") ?? 80);
 
-  const logs = await listAuditLogs({ limit, entityType });
+  const project = await getActiveProjectForUser(auth.user);
+  if (!project) return NextResponse.json({ error: errors.noActiveProject }, { status: 404 });
+
+  const logs = await listAuditLogs({
+    projectId: project.id,
+    includeGlobal: can(auth.user.roles, permissions.admin),
+    limit,
+    entityType
+  });
   const userIds = [...new Set(logs.map((l) => l.user_id).filter(Boolean) as string[])];
   const users = userIds.length
     ? await prisma.user.findMany({ where: { id: { in: userIds } }, select: { id: true, name: true, username: true } })

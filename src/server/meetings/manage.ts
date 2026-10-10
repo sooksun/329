@@ -23,6 +23,36 @@ export type ActionItemInput = {
   status?: TaskStatus;
 };
 
+/** แปลง input เป็นแถว action item — คณะ/ภารกิจที่ผูกต้องอยู่ในโปรเจกต์เดียวกัน */
+async function toActionItemData(projectId: string, item: ActionItemInput) {
+  const [committee, task] = await Promise.all([
+    item.linked_committee_id
+      ? prisma.committee.findFirst({
+          where: { id: item.linked_committee_id, project_id: projectId, deleted_at: null },
+          select: { id: true }
+        })
+      : null,
+    item.linked_task_id
+      ? prisma.task.findFirst({
+          where: { id: item.linked_task_id, project_id: projectId, deleted_at: null },
+          select: { id: true }
+        })
+      : null
+  ]);
+  if (item.linked_committee_id && !committee) throw new Error(errors.committeeNotFound);
+  if (item.linked_task_id && !task) throw new Error(errors.taskNotFound);
+
+  return {
+    decision_title: item.decision_title.trim(),
+    description: item.description.trim(),
+    owner_name: item.owner_name.trim(),
+    due_date: new Date(item.due_date),
+    linked_committee_id: committee?.id ?? null,
+    linked_task_id: task?.id ?? null,
+    status: item.status && actionStatuses.has(item.status) ? item.status : ("NOT_STARTED" as TaskStatus)
+  };
+}
+
 export async function createMeeting(input: {
   projectId: string;
   title: string;
@@ -36,7 +66,12 @@ export async function createMeeting(input: {
   const title = input.title.trim();
   if (!title) throw new Error(errors.meetingTitleRequired);
 
-  const meeting = await prisma.meeting.create({
+  // ตรวจ action items ก่อนสร้าง แล้วสร้างพร้อมการประชุมใน nested write เดียว (atomic, ไม่มี N+1)
+  const actionItems = await Promise.all(
+    (input.actionItems ?? []).map((item) => toActionItemData(input.projectId, item))
+  );
+
+  return prisma.meeting.create({
     data: {
       project_id: input.projectId,
       title,
@@ -50,30 +85,9 @@ export async function createMeeting(input: {
           title: a.title.trim(),
           order: a.order ?? index
         }))
-      }
+      },
+      actionItems: { create: actionItems }
     },
-    include: { agendas: true, actionItems: true }
-  });
-
-  if (input.actionItems?.length) {
-    for (const item of input.actionItems) {
-      await prisma.meetingActionItem.create({
-        data: {
-          meeting_id: meeting.id,
-          decision_title: item.decision_title.trim(),
-          description: item.description.trim(),
-          owner_name: item.owner_name.trim(),
-          due_date: new Date(item.due_date),
-          linked_committee_id: item.linked_committee_id || null,
-          linked_task_id: item.linked_task_id || null,
-          status: item.status && actionStatuses.has(item.status) ? item.status : "NOT_STARTED"
-        }
-      });
-    }
-  }
-
-  return prisma.meeting.findUniqueOrThrow({
-    where: { id: meeting.id },
     include: { agendas: { orderBy: { order: "asc" } }, actionItems: true }
   });
 }
@@ -135,18 +149,7 @@ export async function softDeleteMeeting(meetingId: string, projectId: string, up
 export async function addMeetingActionItem(meetingId: string, projectId: string, item: ActionItemInput) {
   const meeting = await prisma.meeting.findFirst({ where: { id: meetingId, project_id: projectId, deleted_at: null } });
   if (!meeting) throw new Error(errors.meetingNotFound);
-  return prisma.meetingActionItem.create({
-    data: {
-      meeting_id: meetingId,
-      decision_title: item.decision_title.trim(),
-      description: item.description.trim(),
-      owner_name: item.owner_name.trim(),
-      due_date: new Date(item.due_date),
-      linked_committee_id: item.linked_committee_id || null,
-      linked_task_id: item.linked_task_id || null,
-      status: item.status && actionStatuses.has(item.status) ? item.status : "NOT_STARTED"
-    }
-  });
+  return prisma.meetingActionItem.create({ data: { meeting_id: meetingId, ...(await toActionItemData(projectId, item)) } });
 }
 
 export async function deleteMeetingActionItem(itemId: string, meetingId: string) {

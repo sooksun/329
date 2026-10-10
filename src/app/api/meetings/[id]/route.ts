@@ -46,6 +46,7 @@ export async function PATCH(request: Request) {
     );
     await prisma.auditLog.create({
       data: {
+        project_id: project.id,
         user_id: auth.user.id,
         action: "Update meeting",
         entity_type: "Meeting",
@@ -73,7 +74,7 @@ export async function DELETE(request: Request) {
   try {
     await softDeleteMeeting(id, project.id, auth.user.id);
     await prisma.auditLog.create({
-      data: { user_id: auth.user.id, action: "Delete meeting", entity_type: "Meeting", entity_id: id }
+      data: { project_id: project.id, user_id: auth.user.id, action: "Delete meeting", entity_type: "Meeting", entity_id: id }
     });
     await invalidateProjectCache(project.id);
     return NextResponse.json({ ok: true });

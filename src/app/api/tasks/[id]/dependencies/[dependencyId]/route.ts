@@ -30,6 +30,7 @@ export async function DELETE(request: Request) {
     await removeTaskDependency(dependencyId, taskId);
     await prisma.auditLog.create({
       data: {
+        project_id: access.task.project_id,
         user_id: auth.user.id,
         action: "Remove task dependency",
         entity_type: "TaskDependency",

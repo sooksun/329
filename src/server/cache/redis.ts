@@ -55,8 +55,13 @@ export async function cacheDeletePattern(pattern: string) {
   if (!redis) return;
   try {
     if (redis.status !== "ready") await redis.connect();
-    const keys = await redis.keys(pattern);
-    if (keys.length) await redis.del(...keys);
+    // SCAN แทน KEYS — KEYS บล็อก Redis ทั้งก้อนระหว่างไล่ทุก key
+    let cursor = "0";
+    do {
+      const [next, keys] = await redis.scan(cursor, "MATCH", pattern, "COUNT", 200);
+      if (keys.length) await redis.del(...keys);
+      cursor = next;
+    } while (cursor !== "0");
   } catch {
     /* optional cache */
   }

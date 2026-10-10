@@ -41,9 +41,10 @@ const taskDetailInclude = {
 } as const;
 
 export async function requireTaskAccess(taskId: string, user: SessionUser, mode: "view" | "edit") {
+  // ตรวจสิทธิ์ใช้แค่ field ของภารกิจ + ลิงก์ dependency (route dependencies ใช้) — ไม่โหลด subtasks/evidence/comments ทั้งก้อน
   const task = await prisma.task.findFirst({
     where: { id: taskId, deleted_at: null },
-    include: taskDetailInclude
+    include: { dependencies: taskDetailInclude.dependencies, dependents: taskDetailInclude.dependents }
   });
   if (!task) return { error: errors.taskNotFound, status: 404 as const };
 

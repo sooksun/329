@@ -5,9 +5,9 @@ import { errors } from "@/lib/messages";
 import { prisma } from "@/lib/prisma";
 import { validateSubtaskInput, weightedProgress } from "@/lib/rules";
 import { invalidateProjectCache } from "@/server/cache/invalidate";
-import { getCommitteeAccessContext, isGlobalTaskAdmin } from "@/server/auth/committee-access";
+import { getCommitteeAccessContext } from "@/server/auth/committee-access";
 import { requireApiSession } from "@/server/auth/session";
-import { canUpdateTask, forbiddenResponse } from "@/server/permissions/assert";
+import { canUpdateTask, canVerifyTask, forbiddenResponse } from "@/server/permissions/assert";
 
 const taskStatuses = new Set<TaskStatus>(["NOT_STARTED", "IN_PROGRESS", "SUBMITTED", "REVISION_REQUIRED", "VERIFIED", "DONE", "DELAYED"]);
 
@@ -41,15 +41,25 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     return forbiddenResponse(errors.subtaskEditCommitteeOnly);
   }
 
-  const body = await request.json();
+  const body = await request.json().catch(() => null);
+  if (!body || typeof body !== "object") {
+    return NextResponse.json({ error: errors.dataInvalid }, { status: 400 });
+  }
   const title = String(body.title ?? subtask.title).trim();
   const notes = body.notes === undefined ? subtask.notes : String(body.notes ?? "").trim() || null;
   const nextStatus = String(body.status ?? subtask.status) as TaskStatus;
   const reportedProgress = Number(body.reported_progress ?? subtask.reported_progress);
-  const verifiedProgress = Number(body.verified_progress ?? subtask.verified_progress);
+  // verified_progress ของงานย่อยถูก roll-up ขึ้นภารกิจ → ต้องเป็นผู้ตรวจเท่านั้น (เหมือน PATCH /api/tasks/[id])
+  const canVerify = canVerifyTask(auth.user, subtask.task, access);
+  const verifiedProgress = canVerify
+    ? Number(body.verified_progress ?? subtask.verified_progress)
+    : subtask.verified_progress;
 
   if (!taskStatuses.has(nextStatus)) {
     return NextResponse.json({ error: errors.statusInvalid }, { status: 400 });
+  }
+  if (nextStatus === "VERIFIED" && subtask.status !== "VERIFIED" && !canVerify) {
+    return forbiddenResponse(errors.verifyReviewerOnly);
   }
 
   try {
@@ -77,7 +87,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
 
   if (body.owner_id !== undefined) {
     const canAssign =
-      isGlobalTaskAdmin(auth.user) ||
+      access.isGlobalAdmin ||
       can(auth.user.roles, permissions.taskManage) ||
       can(auth.user.roles, permissions.admin);
     if (!canAssign) {
@@ -89,7 +99,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
       const member = await prisma.committeeMember.findFirst({
         where: { committee_id: subtask.task.committee_id, user_id: nextOwner }
       });
-      if (!member && !isGlobalTaskAdmin(auth.user)) {
+      if (!member && !access.isGlobalAdmin) {
         return NextResponse.json({ error: "ผู้รับผิดชอบต้องอยู่ในคณะกรรมการของงานนี้" }, { status: 400 });
       }
     }
@@ -105,6 +115,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
 
   await prisma.auditLog.create({
     data: {
+      project_id: subtask.task.project_id,
       user_id: auth.user.id,
       action: "Update subtask",
       entity_type: "Subtask",

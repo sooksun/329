@@ -15,7 +15,10 @@ export async function POST(request: Request) {
   if (denied) return denied;
 
   const userId = auth.user.id;
-  const body = await request.json();
+  const body = await request.json().catch(() => null);
+  if (!body || typeof body.id !== "string" || !body.id) {
+    return NextResponse.json({ error: errors.dataInvalid }, { status: 400 });
+  }
   if (!["APPROVED", "REJECTED"].includes(body.status)) return NextResponse.json({ error: errors.evidenceStatusInvalid }, { status: 400 });
   const old = await prisma.evidence.findUnique({
     where: { id: body.id },
@@ -40,6 +43,7 @@ export async function POST(request: Request) {
   });
   await prisma.auditLog.create({
     data: {
+      project_id: old.project_id,
       user_id: userId,
       action: body.status === "APPROVED" ? "Approve evidence" : "Reject evidence",
       entity_type: "Evidence",

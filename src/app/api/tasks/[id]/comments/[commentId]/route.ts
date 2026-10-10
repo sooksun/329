@@ -30,6 +30,7 @@ export async function DELETE(request: Request) {
     await softDeleteTaskComment(commentId, taskId, auth.user);
     await prisma.auditLog.create({
       data: {
+        project_id: access.task.project_id,
         user_id: auth.user.id,
         action: "Delete task comment",
         entity_type: "Comment",

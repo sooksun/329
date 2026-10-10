@@ -1,41 +1,30 @@
 import { cache } from "react";
-import { cookies } from "next/headers";
 import { unstable_noStore as noStore } from "next/cache";
 import type { Project } from "@prisma/client";
-import { MIS_PROJECT_COOKIE } from "@/lib/tenant-cookies";
 import { prisma } from "@/lib/prisma";
 import { getOptionalSessionUser } from "@/server/auth/session";
-import { getActiveProjectForUser, resolveActiveProjectId } from "@/server/tenant/project-access";
-
-async function resolveProjectIdFromSession(): Promise<string | null> {
-  const user = await getOptionalSessionUser();
-  if (!user) {
-    const fallback = await prisma.project.findFirst({
-      where: { deleted_at: null },
-      orderBy: { created_at: "asc" },
-      select: { id: true }
-    });
-    return fallback?.id ?? null;
-  }
-
-  const cookieStore = await cookies();
-  const requested = cookieStore.get(MIS_PROJECT_COOKIE)?.value ?? null;
-  return resolveActiveProjectId(user, requested);
-}
+import { getActiveProjectForUser } from "@/server/tenant/project-access";
 
 export const getActiveProject = cache(async (): Promise<Project | null> => {
   noStore();
   const user = await getOptionalSessionUser();
   if (user) return getActiveProjectForUser(user);
 
-  const projectId = await resolveProjectIdFromSession();
-  if (!projectId) return null;
-  return prisma.project.findFirst({ where: { id: projectId, deleted_at: null } });
+  return prisma.project.findFirst({ where: { deleted_at: null }, orderBy: { created_at: "asc" } });
 });
+
+/** ตรวจงานเลยกำหนดได้ไม่เกิน 1 ครั้ง/นาที/โปรเจกต์ ต่อ process — เดิมเขียน DB + แจ้งเตือนทุกครั้งที่ render หน้า */
+const DELAY_SYNC_INTERVAL_MS = 60 * 1000;
+const lastDelaySync = new Map<string, number>();
 
 export const syncDelayedTasks = cache(async (projectId: string) => {
   noStore();
   const now = new Date();
+  const last = lastDelaySync.get(projectId) ?? 0;
+  if (now.getTime() - last < DELAY_SYNC_INTERVAL_MS) return;
+  // ตั้งเวลาก่อน await — request ที่เข้ามาพร้อมกันจะไม่แจ้งเตือนซ้ำ
+  lastDelaySync.set(projectId, now.getTime());
+
   const toDelay = await prisma.task.findMany({
     where: {
       project_id: projectId,
@@ -54,16 +43,22 @@ export const syncDelayedTasks = cache(async (projectId: string) => {
 
   const { notifyDelayedTasks } = await import("@/server/notifications/dispatch");
   await notifyDelayedTasks(projectId, toDelay);
+  // สถานะงานเปลี่ยน → cache dashboard/summary เก่าต้องทิ้ง
+  const { invalidateProjectCache } = await import("@/server/cache/invalidate");
+  await invalidateProjectCache(projectId);
 });
 
 export async function getActiveProjectContext() {
   const project = await getActiveProject();
   if (!project) return null;
-  await syncDelayedTasks(project.id);
-  return prisma.project.findUnique({
-    where: { id: project.id },
-    include: { organization: { select: { id: true, slug: true, name: true } } }
-  });
+  const [, context] = await Promise.all([
+    syncDelayedTasks(project.id),
+    prisma.project.findUnique({
+      where: { id: project.id },
+      include: { organization: { select: { id: true, slug: true, name: true } } }
+    })
+  ]);
+  return context;
 }
 
 export async function requireActiveProjectContext() {

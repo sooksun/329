@@ -3,7 +3,7 @@ export function projectDashboardKey(projectId: string) {
 }
 
 export function projectShellKey(projectId: string) {
-  return `mis:v1:project:${projectId}:shell`;
+  return `mis:v1:project:${projectId}:shell-summary`;
 }
 
 export function projectCachePattern(projectId: string) {

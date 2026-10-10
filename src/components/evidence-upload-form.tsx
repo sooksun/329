@@ -19,10 +19,12 @@ export function EvidenceUploadForm({ tasks }: { tasks: UploadTask[] }) {
   const [loading, setLoading] = useState(false);
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
+    // เก็บ form ไว้ก่อน await — React ตั้ง event.currentTarget เป็น null หลัง handler ทำงานเสร็จ
+    const formElement = event.currentTarget;
     event.preventDefault();
     setLoading(true);
     try {
-      const form = new FormData(event.currentTarget);
+      const form = new FormData(formElement);
       const response = await fetch("/api/evidence/upload", {
         method: "POST",
         body: form
@@ -31,7 +33,7 @@ export function EvidenceUploadForm({ tasks }: { tasks: UploadTask[] }) {
         const body = await response.json().catch(() => ({}));
         throw new Error(body.error ?? "อัปโหลดไม่สำเร็จ");
       }
-      event.currentTarget.reset();
+      formElement.reset();
       toastCreated("อัปโหลดหลักฐานแล้ว รอตรวจอนุมัติ");
       emitNotificationsChanged();
       router.refresh();

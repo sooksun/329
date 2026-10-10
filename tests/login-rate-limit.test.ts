@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { isLoginAllowed, recordLoginFailure, resetLoginAttempts } from "../src/server/auth/login-rate-limit";
+import {
+  clientIpFromHeaders,
+  isLoginAllowed,
+  recordLoginFailure,
+  resetLoginAttempts
+} from "../src/server/auth/login-rate-limit";
 
 describe("login rate limit", () => {
   it("allows attempts up to the max then blocks", () => {
@@ -27,5 +32,28 @@ describe("login rate limit", () => {
     for (let i = 0; i < 10; i++) recordLoginFailure("mixedcase");
     expect(isLoginAllowed("MIXEDCASE")).toBe(false);
     resetLoginAttempts(u);
+  });
+});
+
+describe("login rate limit per IP", () => {
+  it("does not let an attacker on one IP lock the owner out on another IP", () => {
+    const u = "admin_iptest";
+    for (let i = 0; i < 12; i++) recordLoginFailure(u, "203.0.113.9");
+    expect(isLoginAllowed(u, "203.0.113.9")).toBe(false);
+    expect(isLoginAllowed(u, "198.51.100.7")).toBe(true);
+    resetLoginAttempts(u, "203.0.113.9");
+  });
+
+  it("caps total failures from one IP across many usernames", () => {
+    const ip = "203.0.113.50";
+    for (let i = 0; i < 50; i++) recordLoginFailure(`stuff_${i}`, ip);
+    expect(isLoginAllowed("someone_new", ip)).toBe(false);
+    expect(isLoginAllowed("someone_new", "198.51.100.8")).toBe(true);
+  });
+
+  it("reads the client IP from proxy headers", () => {
+    expect(clientIpFromHeaders({ "x-forwarded-for": "198.51.100.1, 10.0.0.1" })).toBe("198.51.100.1");
+    expect(clientIpFromHeaders({ "x-real-ip": "198.51.100.2" })).toBe("198.51.100.2");
+    expect(clientIpFromHeaders(undefined)).toBe("unknown");
   });
 });
