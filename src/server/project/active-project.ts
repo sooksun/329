@@ -32,7 +32,7 @@ export const syncDelayedTasks = cache(async (projectId: string) => {
       status: { notIn: ["DONE", "VERIFIED", "DELAYED"] },
       due_date: { lt: now }
     },
-    select: { id: true, code: true, title: true, owner_id: true }
+    select: { id: true, code: true, title: true, owner_id: true, due_date: true }
   });
   if (toDelay.length === 0) return;
 

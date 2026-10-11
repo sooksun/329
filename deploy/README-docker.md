@@ -11,7 +11,7 @@ DB: **MariaDB ภายนอก** `192.168.1.4:3306` (database `yunnansports` �
 |---|---|
 | `Dockerfile` | build image (Next.js + prisma CLI + tsx + worker) |
 | `docker-compose.prod.yml` | services: `redis` · `web` · `worker` (ต่อ DB ภายนอก) |
-| `deploy/docker-entrypoint.sh` | (ออปชัน) `prisma db push` เมื่อ `RUN_DB_PUSH=true` |
+| `deploy/docker-entrypoint.sh` | (เฉพาะ DB ใหม่ที่ว่าง) `prisma db push` เมื่อตั้ง `RUN_DB_PUSH=true` — ค่าเริ่มต้น `false` |
 | `deploy/docker-install.sh` | สคริปต์ติดตั้ง/อัปเดตบน Ubuntu |
 | `.env.production.example` | เทมเพลตค่า env (คัดลอกเป็น `.env.production`) |
 
@@ -57,10 +57,15 @@ git pull && $C up -d --build   # อัปเดตเวอร์ชันใ�
 ```
 
 ## เมื่อแก้ Prisma schema (เพิ่ม/แก้ตาราง)
-```bash
-# apply เข้า DB เดิม (ไม่ลบข้อมูล)
-docker compose --env-file .env.production -f docker-compose.prod.yml exec web npx prisma db push
-```
+> ⚠️ **ห้ามใช้ `prisma db push` และห้ามตั้ง `RUN_DB_PUSH=true`** กับ DB นี้ — มีตาราง `calendar` ที่ไม่อยู่ใน Prisma และ db push จะ **DROP ทิ้ง**
+
+1. สำรอง DB (phpMyAdmin → Export)
+2. ดูส่วนต่างระหว่าง DB กับ schema (อ่านอย่างเดียว ไม่แก้ DB):
+   ```bash
+   docker compose --env-file .env.production -f docker-compose.prod.yml exec web npx prisma migrate diff --from-schema-datasource prisma/schema.prisma --to-schema-datamodel prisma/schema.prisma --script
+   ```
+3. ตัดคำสั่ง `DROP TABLE` ของ `calendar` ออก บันทึกเป็นไฟล์ใน `prisma/manual-migrations/` (ชื่อตารางเป็น PascalCase ตาม Prisma — server นี้ `lower_case_table_names=0`)
+4. รันผ่าน phpMyAdmin → Import แล้ว `up -d --build` ตามปกติ
 
 ## ⚠️ ข้อควรระวัง
 - **ห้าม** `npm run db:seed` บน DB ที่มีข้อมูลแล้ว — มันลบข้อมูลทั้งหมดแล้วสร้างใหม่ (ใช้เฉพาะ DB ว่าง)

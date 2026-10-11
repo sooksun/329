@@ -37,7 +37,8 @@ services:
       redis:
         condition: service_started
     ports:
-      - "3000:3000"
+      # host port ปรับได้ด้วย WEB_PORT ใน .env.production (server ที่ 3000 มีงานอื่นใช้อยู่ ใช้ 9990)
+      - "${WEB_PORT:-3000}:3000"
     volumes:
       - ./storage:/app/storage # เก็บไฟล์อัปโหลด/รายงาน/log ให้คงอยู่บน host
 

@@ -32,7 +32,7 @@ export async function POST() {
       action: "Create dashboard snapshot",
       entity_type: "DashboardSnapshot",
       entity_id: snapshot.id,
-      new_value: JSON.stringify(payload.frozen)
+      new_value: JSON.stringify({ title: snapshot.title })
     }
   });
   await invalidateProjectCache(payload.project.id);

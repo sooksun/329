@@ -1,3 +1,4 @@
+import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getServerSession } from "next-auth";
 import { DashboardActions } from "@/components/dashboard-actions";
@@ -13,7 +14,7 @@ import { linkButtonClasses } from "@/lib/button-styles";
 
 export default async function MeetingsPage() {
   const data = await getMeetingsPageData();
-  if (!data) return null;
+  if (!data) notFound();
 
   const session = await getServerSession(authOptions);
   const user = getSessionUser(session);

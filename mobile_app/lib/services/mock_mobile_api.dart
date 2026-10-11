@@ -10,13 +10,13 @@ class MockMobileApi implements MobileApi {
   late List<AppNotification> _notifications;
 
   MockMobileApi() {
-    _seed('kl_staff');
+    _seed('ops_staff');
   }
 
   @override
   Future<AuthSession> login(String username, String password) async {
     await Future<void>.delayed(const Duration(milliseconds: 450));
-    final valid = (username == 'kl_staff' && password == 'Pass329!') ||
+    final valid = (username == 'ops_staff' && password == 'Pass329!') ||
         (username == 'kl_lead' && password == 'Pass329!') ||
         (username == 'reviewer' && password == 'Pass329!') ||
         (username == 'director' && password == 'password123');

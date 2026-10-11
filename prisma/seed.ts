@@ -431,7 +431,27 @@ async function resetDatabase() {
   await prisma.user.deleteMany();
 }
 
+/**
+ * seed นี้ "ลบข้อมูลทุกตาราง" ก่อนสร้างใหม่ — กันรันใส่ DB ที่มีข้อมูลจริงโดยไม่ตั้งใจ
+ * (npm run db:seed, RUN_SEED=true หรือ prisma migrate reset ที่เรียก seed อัตโนมัติ)
+ */
+async function assertSafeToReset() {
+  const existingUsers = await prisma.user.count();
+  const isProduction = process.env.NODE_ENV === "production";
+  if ((existingUsers > 0 || isProduction) && process.env.SEED_CONFIRM !== "WIPE_ALL_DATA") {
+    throw new Error(
+      `ยกเลิก seed: DB มีผู้ใช้อยู่แล้ว ${existingUsers} คน${isProduction ? " (NODE_ENV=production)" : ""} — ` +
+        "seed จะลบข้อมูลทั้งหมด ถ้าตั้งใจจริงให้ตั้ง SEED_CONFIRM=WIPE_ALL_DATA"
+    );
+  }
+  if (isProduction) {
+    const missing = ["SEED_ADMIN_PASSWORD", "SEED_DIRECTOR_PASSWORD", "SEED_MEMBER_PASSWORD"].filter((key) => !process.env[key]);
+    if (missing.length) throw new Error(`ยกเลิก seed: production ต้องตั้ง ${missing.join(", ")} (ห้ามใช้รหัสผ่านเริ่มต้น)`);
+  }
+}
+
 async function main() {
+  await assertSafeToReset();
   await resetDatabase();
 
   const roleNames = ["Super Admin", "Project Director", "Project Secretary", "Committee Lead", "Data Recorder", "Task Owner", "Finance Officer", "Evidence Reviewer", "Viewer"];

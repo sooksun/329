@@ -1,3 +1,4 @@
+import { notFound } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { EvidenceActions } from "@/components/evidence-actions";
 import { EvidenceUploadForm } from "@/components/evidence-upload-form";
@@ -16,7 +17,7 @@ import { thaiStatus } from "@/lib/utils";
 
 export default async function EvidencePage() {
   const data = await getEvidencePageData();
-  if (!data) return null;
+  if (!data) notFound();
 
   const session = await getServerSession(authOptions);
   const user = getSessionUser(session);

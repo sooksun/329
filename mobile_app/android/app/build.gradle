@@ -48,11 +48,37 @@ android {
         versionName flutterVersionName
     }
 
+    // release ต้อง sign ด้วย keystore จริงจาก android/key.properties (ไม่อยู่ใน git)
+    // storePassword=… keyPassword=… keyAlias=… storeFile=/path/to/upload-keystore.jks
+    def keystoreProperties = new Properties()
+    def keystorePropertiesFile = rootProject.file('key.properties')
+    if (keystorePropertiesFile.exists()) {
+        keystorePropertiesFile.withReader('UTF-8') { reader -> keystoreProperties.load(reader) }
+    }
+
+    signingConfigs {
+        release {
+            if (keystorePropertiesFile.exists()) {
+                keyAlias keystoreProperties['keyAlias']
+                keyPassword keystoreProperties['keyPassword']
+                storeFile file(keystoreProperties['storeFile'])
+                storePassword keystoreProperties['storePassword']
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig signingConfigs.debug
+            if (keystorePropertiesFile.exists()) {
+                signingConfig signingConfigs.release
+            } else {
+                // ไม่มี key.properties → ห้ามออก release ที่ sign ด้วย debug key (ติดตั้งทับ/อัปเดตไม่ได้ และไม่ปลอดภัย)
+                gradle.taskGraph.whenReady { graph ->
+                    if (graph.allTasks.any { it.name.toLowerCase().contains('release') && (it.name.startsWith('assemble') || it.name.startsWith('bundle')) }) {
+                        throw new GradleException("ไม่พบ android/key.properties — สร้าง release keystore ก่อน build release (ดู mobile_app/README.md)")
+                    }
+                }
+            }
         }
     }
 }

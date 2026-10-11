@@ -32,6 +32,57 @@ class _FakeAdapter implements HttpClientAdapter {
   void close({bool force = false}) {}
 }
 
+/// จำลอง backend หลาย endpoint และนับจำนวนครั้งที่ดึง export
+class _CountingAdapter implements HttpClientAdapter {
+  int exportCalls = 0;
+
+  @override
+  Future<ResponseBody> fetch(RequestOptions options,
+      Stream<Uint8List>? requestStream, Future<void>? cancelFuture) async {
+    Object body = const <String, dynamic>{};
+    final path = options.path;
+    if (path.startsWith('/api/tasks/export')) {
+      exportCalls++;
+      body = {
+        'project': {
+          'id': 'p1',
+          'name': 'P',
+          'edition': '2571',
+          'event_date': '2028-03-29T01:00:00.000Z'
+        },
+        'overview': {
+          'overall': 38,
+          'totalTasks': 36,
+          'delayedTasks': 3,
+          'evidencePending': 4,
+          'daysRemaining': 170,
+          'budget': {'planned': 1234567, 'actual': 849000.5}
+        },
+        'committees': [],
+        'tasks': [],
+        'rows': []
+      };
+    } else if (path == '/api/projects') {
+      body = {'projects': [], 'activeProjectId': 'p1'};
+    } else if (path == '/api/users/me') {
+      body = {'id': 'u1', 'name': 'ผู้ใช้', 'username': 'ops_staff'};
+    } else if (path == '/api/auth/session') {
+      body = {
+        'user': {
+          'id': 'u1',
+          'roles': ['Task Owner']
+        }
+      };
+    }
+    return ResponseBody.fromString(jsonEncode(body), 200, headers: {
+      Headers.contentTypeHeader: [Headers.jsonContentType]
+    });
+  }
+
+  @override
+  void close({bool force = false}) {}
+}
+
 DioMobileApi _api(int status, Object body,
     {Map<String, List<String>> headers = const {}}) {
   final dio =
@@ -93,6 +144,29 @@ void main() {
     expect(task.subtasks.single.ownerId, 'u2');
     expect(task.evidence.single.reviewerName, 'u3');
     expect(task.evidence.single.rejectionReason, 'ไม่ชัด');
+  });
+
+  test('downloads the export once when dashboard and tasks load together',
+      () async {
+    final adapter = _CountingAdapter();
+    final dio =
+        Dio(BaseOptions(baseUrl: 'http://test', validateStatus: (_) => true));
+    dio.httpClientAdapter = adapter;
+    final api = DioMobileApi(dio: dio);
+
+    final dashboard = await api.dashboard('cookie');
+    await api.myTasks('cookie');
+
+    expect(adapter.exportCalls, 1);
+    // ใช้ตัวเลขจาก server แทนค่าที่เคย hardcode (งบ 3,660,000 / วันงาน 2027-03-29)
+    expect(dashboard.projectKpi.overall, 38);
+    expect(dashboard.projectKpi.plannedBudget, 1234567);
+    expect(dashboard.projectKpi.daysRemaining, 170);
+
+    // เขียนข้อมูล → export ต้องถูกดึงใหม่
+    await dio.patch('/api/subtasks/s1');
+    await api.myTasks('cookie');
+    expect(adapter.exportCalls, 2);
   });
 
   test('treats a redirect to the login page as an expired session', () async {

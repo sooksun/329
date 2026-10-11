@@ -50,7 +50,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
   const nextStatus = String(body.status ?? subtask.status) as TaskStatus;
   const reportedProgress = Number(body.reported_progress ?? subtask.reported_progress);
   // verified_progress ของงานย่อยถูก roll-up ขึ้นภารกิจ → ต้องเป็นผู้ตรวจเท่านั้น (เหมือน PATCH /api/tasks/[id])
-  const canVerify = canVerifyTask(auth.user, subtask.task, access);
+  const canVerify = canVerifyTask(auth.user, subtask.task, access, [subtask.owner_id]);
   const verifiedProgress = canVerify
     ? Number(body.verified_progress ?? subtask.verified_progress)
     : subtask.verified_progress;

@@ -6,5 +6,5 @@ export async function getTimelinePageData() {
   if (!project) return null;
 
   const tasks = await listTaskSummaries(project.id);
-  return { tasks };
+  return { project, tasks };
 }

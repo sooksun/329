@@ -1,24 +1,9 @@
-import { mkdir, readFile } from "node:fs/promises";
-import path from "node:path";
 import pptxgen from "pptxgenjs";
 import { errors } from "@/lib/messages";
 import { prisma } from "@/lib/prisma";
+import { addExecutiveSlides } from "@/server/reports/pptx-slides";
+import { parseSnapshotData } from "@/server/reports/snapshot-data";
 import { putObject } from "@/server/storage/object-store";
-
-const SLIDES = [
-  { key: "cover", title: "หน้าปก" },
-  { key: "overview", title: "ภาพรวมโครงการ" },
-  { key: "dashboard", title: "แดชบอร์ดภาพรวม" },
-  { key: "committees", title: "ความก้าวหน้าตามคณะ" },
-  { key: "delayed", title: "งานล่าช้า" },
-  { key: "timeline", title: "ไทม์ไลน์" },
-  { key: "budget", title: "สรุปงบประมาณ" },
-  { key: "risks", title: "เมทริกซ์ความเสี่ยง" },
-  { key: "evidence", title: "แกลเลอรีหลักฐาน" },
-  { key: "decisions", title: "ประเด็นที่ต้องตัดสินใจ" },
-  { key: "next7", title: "7 วันข้างหน้า" },
-  { key: "summary", title: "สรุปท้ายรายงาน" }
-] as const;
 
 export async function generatePptxForSnapshot(snapshotId: string, userId: string) {
   const snapshot = await prisma.dashboardSnapshot.findUnique({
@@ -33,48 +18,15 @@ export async function generatePptxForSnapshot(snapshotId: string, userId: string
   pptx.subject = "รายงานจาก Snapshot แดชบอร์ด";
   pptx.theme = { headFontFace: "Sarabun", bodyFontFace: "Sarabun" };
 
-  for (const slideDef of SLIDES) {
-    const isCover = slideDef.key === "cover";
-    const slide = pptx.addSlide();
-    slide.background = { color: isCover ? "123F76" : "FBFAF5" };
-    slide.addText(isCover ? snapshot.project.name : slideDef.title, {
-      x: 0.6,
-      y: 0.5,
-      w: 12,
-      h: 0.6,
-      fontFace: "Sarabun",
-      bold: true,
-      fontSize: isCover ? 30 : 22,
-      color: isCover ? "FFFFFF" : "101827",
-      fit: "shrink"
-    });
-    slide.addText(snapshot.title, {
-      x: 0.6,
-      y: 1.25,
-      w: 11.8,
-      h: 0.4,
-      fontFace: "Sarabun",
-      fontSize: 14,
-      color: isCover ? "D8BD75" : "667085",
-      fit: "shrink"
-    });
-    slide.addText("สร้างจากข้อมูล Snapshot แดชบอร์ดที่บันทึกไว้เท่านั้น", {
-      x: 0.6,
-      y: 6.8,
-      w: 11.5,
-      h: 0.3,
-      fontSize: 10,
-      color: isCover ? "FFFFFF" : "667085"
-    });
-  }
+  // เนื้อหาจริงจากข้อมูลที่ freeze ไว้ใน snapshot (เดิมทุกสไลด์มีแค่หัวข้อ)
+  addExecutiveSlides(pptx, parseSnapshotData(snapshot.data), {
+    projectName: snapshot.project.name,
+    snapshotTitle: snapshot.title
+  });
 
+  // เขียนลง object store ที่เดียว (เดิมเขียน storage/reports ก่อนแล้วอ่านกลับมาอัปโหลดซ้ำ)
   const filename = `329-report-${snapshot.id}.pptx`;
-  const localDir = path.join(process.cwd(), "storage", "reports");
-  await mkdir(localDir, { recursive: true });
-  const localPath = path.join(localDir, filename);
-  await pptx.writeFile({ fileName: localPath });
-
-  const bytes = await readFile(localPath);
+  const bytes = (await pptx.write({ outputType: "nodebuffer" })) as Buffer;
   const stored = await putObject({
     projectId: snapshot.project_id,
     kind: "report",

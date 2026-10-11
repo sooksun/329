@@ -46,7 +46,7 @@ cat <<EOF
     DB:       MariaDB ภายนอก 192.168.1.4:3306 (database: yunnansports — มีข้อมูลอยู่แล้ว)
 
     ⚠️  ห้ามรัน db:seed บน DB ที่มีข้อมูลแล้ว (จะลบข้อมูลทั้งหมด)
-        - อัปเดต schema เมื่อแก้ Prisma:  $COMPOSE exec web npx prisma db push
+        - อัปเดต schema เมื่อแก้ Prisma:  ห้าม db push — ดู "เมื่อแก้ Prisma schema" ใน deploy/README-docker.md
         - seed ใหม่ (เฉพาะ DB ว่าง):       $COMPOSE exec web npm run db:seed
 
     คำสั่งที่ใช้บ่อย:

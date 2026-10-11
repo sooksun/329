@@ -1,6 +1,7 @@
+import { notFound } from "next/navigation";
 import { Badge } from "@/components/ui";
 import { TimelineMobileList } from "@/components/timeline-mobile-list";
-import { EVENT_329, GANTT_MONTH_LABELS, GANTT_WINDOW, formatThaiEventPeriod, ganttBarStyle } from "@/lib/event-calendar";
+import { EVENT_329, formatThaiEventPeriod, ganttBarStyle, ganttMonthLabels, projectGanttWindow } from "@/lib/event-calendar";
 import Link from "next/link";
 import { CardGrid, PageHeader, PageLink, PageStack, SectionCard } from "@/components/page/page-layout";
 import { formatThaiDate } from "@/lib/utils";
@@ -12,16 +13,20 @@ type TimelinePageProps = {
 
 export default async function TimelinePage({ searchParams }: TimelinePageProps) {
   const data = await getTimelinePageData();
-  if (!data) return null;
+  if (!data) notFound();
   const params = (await searchParams) ?? {};
   const view = params.view === "calendar" ? "calendar" : "gantt";
   const tasks = [...data.tasks].sort((a, b) => a.start_date.getTime() - b.start_date.getTime());
+  // หน้าต่าง Gantt และช่วงวันงานมาจากโปรเจกต์ที่เลือก (เดิม hardcode รอบ 2570)
+  const ganttWindow = projectGanttWindow(data.project.event_date, data.project.event_end_date, tasks);
+  const monthLabels = ganttMonthLabels(ganttWindow);
+  const eventPeriod = formatThaiEventPeriod(data.project.event_date, data.project.event_end_date ?? data.project.event_date);
 
   return (
     <PageStack>
       <PageHeader
         title="กำหนดการและไทม์ไลน์"
-        subtitle={`${tasks.length} ภารกิจ · ${formatThaiEventPeriod()} · ${EVENT_329.meaningShort}`}
+        subtitle={`${tasks.length} ภารกิจ · ${eventPeriod} · ${EVENT_329.meaningShort}`}
         actions={
           <>
             <PageLink href="/timeline?view=calendar" active={view === "calendar"}>
@@ -37,7 +42,9 @@ export default async function TimelinePage({ searchParams }: TimelinePageProps) 
 
       <SectionCard className="border-l-4 border-l-[#b68a2e] !p-3 sm:!p-4">
         <p className="text-sm font-bold text-[#123f76]">ปฏิทินงาน 329</p>
-        <p className="mt-1 text-xs leading-relaxed text-[#667085] sm:text-sm">{EVENT_329.meaningLong}</p>
+        <p className="mt-1 text-xs leading-relaxed text-[#667085] sm:text-sm">
+          ชื่องาน 329 หมายถึงจัดขึ้นทุกปีในวันที่ 29 มีนาคม (3 = มีนาคม, 29 = วันที่ 29) · {data.project.edition} ({eventPeriod})
+        </p>
       </SectionCard>
 
       <SectionCard>
@@ -50,7 +57,7 @@ export default async function TimelinePage({ searchParams }: TimelinePageProps) 
 
         {view === "calendar" ? (
           <CardGrid cols={3}>
-            {tasks.slice(0, 36).map((task) => (
+            {tasks.map((task) => (
               <Link
                 href={`/tasks/detail?id=${task.id}`}
                 key={task.id}
@@ -67,18 +74,18 @@ export default async function TimelinePage({ searchParams }: TimelinePageProps) 
           </CardGrid>
         ) : (
           <>
-            <TimelineMobileList tasks={tasks} />
+            <TimelineMobileList tasks={tasks} ganttWindow={ganttWindow} />
             <div className="hidden md:block">
               <div className="gantt-row bg-[#f5f2ea] font-black">
                 <span className="p-3">ภารกิจ</span>
                 <div className="grid grid-cols-5 text-center text-sm">
-                  {GANTT_MONTH_LABELS.map((label) => (
-                    <span key={label}>{label}</span>
+                  {monthLabels.map((label, index) => (
+                    <span key={`${label}-${index}`}>{label}</span>
                   ))}
                 </div>
               </div>
-              {tasks.slice(0, 32).map((task) => {
-                const bar = ganttBarStyle(task.start_date, task.due_date, GANTT_WINDOW.start, GANTT_WINDOW.end);
+              {tasks.map((task) => {
+                const bar = ganttBarStyle(task.start_date, task.due_date, ganttWindow.start, ganttWindow.end);
                 return (
                   <Link href={`/tasks/detail?id=${task.id}`} className="gantt-row hover:bg-[#fbfaf5]" key={task.id}>
                     <div className="p-3">

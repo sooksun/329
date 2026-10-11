@@ -42,9 +42,16 @@ npm ci
 echo "==> [3/7] prisma generate"
 npx prisma generate
 
-echo "==> [4/7] sync schema เข้าฐานข้อมูล (prisma db push)"
-# db push จะสร้าง/อัปเดตตารางให้ตรง schema — จะหยุดเองถ้าจะทำให้ข้อมูลหาย (ไม่ใส่ --accept-data-loss เพื่อความปลอดภัย)
-npx prisma db push
+echo "==> [4/7] ตรวจว่า schema ใน DB ตรงกับ prisma/schema.prisma (ไม่แก้ DB อัตโนมัติ)"
+# ไม่ใช้ prisma db push: DB production มีตารางนอก Prisma (`calendar`) ที่ db push จะ DROP ทิ้ง
+# ถ้าไม่ตรง → สำรอง DB แล้วรัน SQL ใน prisma/manual-migrations/ ด้วยมือก่อน deploy
+PENDING="$(npx prisma migrate diff --from-schema-datasource prisma/schema.prisma --to-schema-datamodel prisma/schema.prisma --script \
+  | grep -vE '^[[:space:]]*(--.*)?$' | grep -v 'DROP TABLE `calendar`' || true)"
+if [ -n "$PENDING" ]; then
+  echo "!! schema ใน DB ยังไม่ตรง — รัน SQL ใน prisma/manual-migrations/ ก่อน (สิ่งที่ยังขาด):" >&2
+  echo "$PENDING" >&2
+  exit 1
+fi
 
 echo "==> [5/7] build (next build)"
 npm run build

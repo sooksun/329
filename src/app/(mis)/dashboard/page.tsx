@@ -1,3 +1,4 @@
+import { notFound } from "next/navigation";
 import { AlertTriangle } from "lucide-react";
 import Link from "next/link";
 import { Badge, Card, ProgressBar } from "@/components/ui";
@@ -14,22 +15,23 @@ import {
 } from "@/components/page/page-layout";
 import { linkButtonClasses } from "@/lib/button-styles";
 import { getDashboardPageData } from "@/server/project/loaders/dashboard";
-import { formatThaiEventPeriod, EVENT_329 } from "@/lib/event-calendar";
+import { formatThaiEventPeriod } from "@/lib/event-calendar";
+import { formatThaiDateShort } from "@/lib/format-date";
 import { formatBaht, formatThaiDate } from "@/lib/utils";
 
 export default async function DashboardPage() {
   const data = await getDashboardPageData();
-  if (!data) return null;
+  if (!data) notFound();
 
   const kpis = [
     ["ภารกิจทั้งหมด", data.summary.totalTasks, "จำนวนงานในโปรเจกต์"],
-    ["งานเสร็จสิ้น", data.summary.completedTasks, "สถานะ DONE"],
+    ["งานเสร็จสิ้น", data.summary.completedTasks, "สถานะ DONE + VERIFIED"],
     ["งานล่าช้า", data.summary.delayedTasks, "ต้องเร่งรัด"],
     ["ความเสี่ยงวิกฤต/สูง", data.summary.criticalRisks, "ระดับวิกฤตและสูง"],
     ["แผนงบประมาณ", formatBaht(data.summary.budget.planned), "ตามแผน"],
     ["ใช้จริง", formatBaht(data.summary.budget.actual), "ยอดจ่าย/ผูกพัน"],
-    ["งบคงเหลือ", formatBaht(data.summary.budget.planned - data.summary.budget.actual), "ตามแผน"],
-    ["หลักฐานอนุมัติ", `${data.summary.evidenceCoverage}%`, "ครอบคลุมงาน"],
+    ["งบคงเหลือตามแผน", formatBaht(data.summary.budget.planned - data.summary.budget.actual), "แผน − ใช้จริง"],
+    ["หลักฐานอนุมัติ", `${data.summary.evidenceCoverage}%`, "ของภารกิจมีหลักฐานอนุมัติ"],
     ["งาน 7 วันข้างหน้า", data.summary.next7DaysTasks.length, "ใกล้ถึงกำหนด"]
   ] as const;
 
@@ -45,11 +47,11 @@ export default async function DashboardPage() {
         title="ภาพรวมโครงการ"
         subtitle={
           <>
-            {data.project.edition} · {formatThaiEventPeriod(data.project.event_date, data.project.event_end_date ?? EVENT_329.end)} · อัปเดต{" "}
+            {data.project.edition} · {formatThaiEventPeriod(data.project.event_date, data.project.event_end_date ?? data.project.event_date)} · อัปเดต{" "}
             {new Date().toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" })} น.
           </>
         }
-        actions={<DashboardActions latestSnapshotId={data.snapshots[0]?.id} />}
+        actions={<DashboardActions latestSnapshotId={data.latestSnapshotId ?? undefined} />}
       />
 
       <section className="grid gap-4 lg:grid-cols-[1.25fr_0.75fr]">
@@ -84,10 +86,10 @@ export default async function DashboardPage() {
 
         <div className="grid gap-3">
           <Card className="bg-[#123f76] p-4 text-white sm:p-5">
-            <p className="text-sm text-blue-100">นับถอยหลังถึงวันเปิดงาน (29 มี.ค.)</p>
+            <p className="text-sm text-blue-100">นับถอยหลังถึงวันเปิดงาน ({formatThaiDateShort(data.project.event_date)})</p>
             <div className="mt-1 text-3xl font-black sm:text-4xl">{data.summary.daysRemaining} วัน</div>
             <p className="text-xs text-blue-100 sm:text-sm">
-              {formatThaiEventPeriod(data.project.event_date, data.project.event_end_date ?? EVENT_329.end)}
+              {formatThaiEventPeriod(data.project.event_date, data.project.event_end_date ?? data.project.event_date)}
             </p>
           </Card>
           <div className="grid grid-cols-2 gap-2 sm:gap-3">
@@ -120,7 +122,7 @@ export default async function DashboardPage() {
             }
           >
             <div className="space-y-4">
-              {data.committeeStats.slice(2).map((committee) => (
+              {data.committeeStats.map((committee) => (
                 <div key={committee.id} className="grid gap-2 sm:grid-cols-[1fr_auto] sm:items-center">
                   <div className="min-w-0">
                     <div className="flex justify-between gap-2 text-sm font-bold">

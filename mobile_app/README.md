@@ -69,10 +69,24 @@ flutter create --platforms=android,ios .
 
 ## Build APK
 
-```powershell
-cd mobile_app
-flutter build apk --release
-```
+Release builds **must** be signed with a real upload keystore — the build refuses to sign a release with the debug key.
+
+1. Create a keystore once and keep it safe (losing it means the installed app can no longer be updated):
+   ```powershell
+   keytool -genkey -v -keystore "$env:USERPROFILE\329-upload-keystore.jks" -keyalg RSA -keysize 2048 -validity 10000 -alias upload
+   ```
+2. Create `android/key.properties` (gitignored):
+   ```properties
+   storePassword=...
+   keyPassword=...
+   keyAlias=upload
+   storeFile=C:/Users/<you>/329-upload-keystore.jks
+   ```
+3. Build:
+   ```powershell
+   cd mobile_app
+   flutter build apk --release
+   ```
 
 Release APK output:
 
@@ -82,15 +96,23 @@ build/app/outputs/flutter-apk/app-release.apk
 
 ## API base URL
 
-Dev base URL is configured in `.env`.
+Release builds use production `https://329.cnppai.com` (`.env` and the fallback in `lib/core/app_config.dart`).
+For local development override it — the Android emulator reaches the host at `10.0.2.2`:
+
+```powershell
+flutter run --dart-define=API_BASE_URL=http://10.0.2.2:3000
+```
+
+Plain `http://` is allowed only in debug builds (`android/app/src/debug/AndroidManifest.xml`).
 
 The app uses `DioMobileApi` by default. `MockMobileApi` remains available for offline demos.
 
 ## Test accounts
 
+Seed defaults (see `docs/USERS.md`) — change them on any internet-facing server:
+
 | Username | Password | Role |
 | --- | --- | --- |
-| kl_staff | Pass329! | Task Owner |
-| kl_lead | Pass329! | Committee Lead |
-| reviewer | Pass329! | Evidence Reviewer |
+| ops_staff | Pass329! | Task Owner |
+| ops_lead | Pass329! | Committee Lead |
 | director | password123 | Project Director |

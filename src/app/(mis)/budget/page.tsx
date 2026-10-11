@@ -1,3 +1,4 @@
+import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getServerSession } from "next-auth";
 import { Badge, ProgressBar } from "@/components/ui";
@@ -27,7 +28,7 @@ type BudgetPageProps = {
 
 export default async function BudgetPage({ searchParams }: BudgetPageProps) {
   const data = await getBudgetPageData();
-  if (!data) return null;
+  if (!data) notFound();
   const session = await getServerSession(authOptions);
   const user = getSessionUser(session);
   const canEditBudget = user ? await canManageBudget(user, data.project.id) : false;
@@ -76,7 +77,7 @@ export default async function BudgetPage({ searchParams }: BudgetPageProps) {
           ["ขอเบิกแล้ว", formatBaht(b.requested)],
           ["อนุมัติแล้ว", formatBaht(b.approved)],
           ["ใช้จริง", formatBaht(b.actual)],
-          ["คงเหลือ", formatBaht(b.approved - b.actual)]
+          ["คงเหลือจากยอดอนุมัติ", formatBaht(b.approved - b.actual)]
         ].map(([label, value]) => (
           <MetricTile key={label} label={label} value={value} />
         ))}

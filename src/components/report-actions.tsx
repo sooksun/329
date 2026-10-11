@@ -48,3 +48,33 @@ export function ReportGenerateButton({ snapshotId }: { snapshotId?: string }) {
     </div>
   );
 }
+
+/** เลือก Snapshot แล้วสร้างรายงานจาก Snapshot นั้น (เดิม dropdown ไม่ถูกส่งไปไหน — ใช้ล่าสุดเสมอ) */
+export function ReportSnapshotPicker({ snapshots }: { snapshots: { id: string; title: string }[] }) {
+  const [snapshotId, setSnapshotId] = useState(snapshots[0]?.id ?? "");
+
+  if (snapshots.length === 0) {
+    return <p className="text-sm text-[#667085]">ยังไม่มี Snapshot — กดสร้างรายงานด้านบนเพื่อสร้าง Snapshot ใหม่อัตโนมัติ</p>;
+  }
+
+  return (
+    <div className="space-y-3">
+      <label className="block text-sm font-bold" htmlFor="report-snapshot">
+        Snapshot
+      </label>
+      <select
+        id="report-snapshot"
+        className="h-11 w-full rounded-md border px-3"
+        value={snapshotId}
+        onChange={(event) => setSnapshotId(event.target.value)}
+      >
+        {snapshots.map((item) => (
+          <option key={item.id} value={item.id}>
+            {item.title}
+          </option>
+        ))}
+      </select>
+      <ReportGenerateButton snapshotId={snapshotId} />
+    </div>
+  );
+}
