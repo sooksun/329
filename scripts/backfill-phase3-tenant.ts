@@ -16,10 +16,28 @@ async function main() {
     update: { name: ORG_NAME }
   });
 
-  const updated = await prisma.project.updateMany({
+  // script นี้ไว้สำหรับ DB ยุคก่อน multi-tenant (มีองค์กรเดียว) — ถ้ามีองค์กรอื่นอยู่แล้ว
+  // การย้ายทุกโปรเจกต์เข้า org นี้ = รวม tenant เข้าด้วยกัน จึงต้องยืนยันชัดเจน
+  const otherOrgs = await prisma.organization.count({ where: { id: { not: org.id }, deleted_at: null } });
+  if (otherOrgs > 0 && process.env.BACKFILL_CONFIRM !== "MERGE_ALL_ORGS") {
+    throw new Error(
+      `ยกเลิก: มีองค์กรอื่นอยู่แล้ว ${otherOrgs} องค์กร — script นี้จะย้ายทุกโปรเจกต์เข้า ${ORG_SLUG} ` +
+        "ถ้าตั้งใจจริงให้ตั้ง BACKFILL_CONFIRM=MERGE_ALL_ORGS"
+    );
+  }
+
+  const toMove = await prisma.project.findMany({
     where: { organization_id: { not: org.id } },
-    data: { organization_id: org.id, slug: "edition-legacy" }
+    select: { id: true, slug: true }
   });
+  // คง slug เดิมไว้ — เดิมตั้ง "edition-legacy" ให้ทุกโปรเจกต์ ซึ่งชน @@unique([organization_id, slug])
+  for (const project of toMove) {
+    await prisma.project.update({
+      where: { id: project.id },
+      data: { organization_id: org.id, slug: project.slug ?? `edition-legacy-${project.id.slice(-6)}` }
+    });
+  }
+  const updated = { count: toMove.length };
 
   const users = await prisma.user.findMany({ where: { deleted_at: null }, select: { id: true } });
   if (users.length) {

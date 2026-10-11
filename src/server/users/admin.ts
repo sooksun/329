@@ -95,7 +95,9 @@ export async function createUserByAdmin(input: {
     }
   });
 
-  return user;
+  // ห้ามส่ง password_hash กลับไปให้ client (route คืนค่านี้เป็น JSON ตรงๆ)
+  const { password_hash: _passwordHash, ...safeUser } = user;
+  return safeUser;
 }
 
 export async function listCommitteeMembers(committeeId: string) {

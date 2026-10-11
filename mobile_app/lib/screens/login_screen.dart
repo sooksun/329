@@ -14,7 +14,7 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   // เติมบัญชีทดสอบเฉพาะ debug build — release ห้ามมีรหัสผ่านติดแอป
-  final _username = TextEditingController(text: kDebugMode ? 'kl_staff' : '');
+  final _username = TextEditingController(text: kDebugMode ? 'ops_staff' : '');
   final _password = TextEditingController(text: kDebugMode ? 'Pass329!' : '');
   bool _obscure = true;
 
@@ -94,7 +94,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(height: 16),
                   if (kDebugMode)
                     const Text(
-                      'บัญชีทดสอบ: kl_staff / Pass329!',
+                      'บัญชีทดสอบ: ops_staff / Pass329!',
                       textAlign: TextAlign.center,
                     ),
                 ],

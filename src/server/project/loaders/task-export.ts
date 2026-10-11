@@ -5,6 +5,8 @@ import { getSessionUser } from "@/server/auth/session";
 import { getActiveProjectContext } from "@/server/project/active-project";
 import { listTasks } from "@/server/project/queries/tasks";
 import { buildTaskExportRows } from "@/lib/task-export";
+import { prisma } from "@/lib/prisma";
+import { getSummaryMetrics } from "@/server/project/queries/summary-metrics";
 
 export async function getTaskExportPageData(committeeId?: string) {
   const project = await getActiveProjectContext();
@@ -40,8 +42,33 @@ export async function getTaskExportPageData(committeeId?: string) {
     (a, b) => a.name.localeCompare(b.name, "th")
   );
 
+  // ชื่อผู้แสดงความคิดเห็น/ผู้ตรวจ — แอปมือถือเดิมแสดงเป็น id (cuid) — ดึงชื่อครั้งเดียว ไม่ N+1
+  const personIds = [
+    ...new Set(
+      tasks.flatMap((task) => [
+        ...task.comments.map((comment) => comment.user_id),
+        ...task.evidence.map((evidence) => evidence.reviewed_by)
+      ])
+    )
+  ].filter((id): id is string => Boolean(id));
+  const [people, overview] = await Promise.all([
+    personIds.length
+      ? prisma.user.findMany({ where: { id: { in: personIds } }, select: { id: true, name: true } })
+      : Promise.resolve([]),
+    getSummaryMetrics(project.id)
+  ]);
+  const nameOf = new Map(people.map((person) => [person.id, person.name]));
+
   return {
-    project: { id: project.id, name: project.name, edition: project.edition },
+    project: {
+      id: project.id,
+      name: project.name,
+      edition: project.edition,
+      event_date: project.event_date,
+      event_end_date: project.event_end_date
+    },
+    // ตัวเลขภาพรวมจาก server (ถ่วงน้ำหนัก verified เหมือนเว็บ) — แอปเดิมคำนวณเองและ hardcode งบ
+    overview,
     committees,
     tasks: tasks.map((task) => ({
       id: task.id,
@@ -66,12 +93,14 @@ export async function getTaskExportPageData(committeeId?: string) {
         status: evidence.status,
         created_at: evidence.created_at,
         reviewed_by: evidence.reviewed_by,
+        reviewer_name: evidence.reviewed_by ? (nameOf.get(evidence.reviewed_by) ?? null) : null,
         rejection_reason: evidence.rejection_reason
       })),
       comments: task.comments.map((comment) => ({
         id: comment.id,
         body: comment.body,
         user_id: comment.user_id,
+        author_name: comment.user_id ? (nameOf.get(comment.user_id) ?? null) : null,
         created_at: comment.created_at
       }))
     })),

@@ -6,7 +6,8 @@ import { canUpdateTask, canViewTask, forbiddenResponse } from "@/server/permissi
 
 const taskDetailInclude = {
   committee: true,
-  owner: true,
+  // select เฉพาะ field ที่ใช้ — ห้ามโหลด password_hash (ข้อมูลนี้ถูก cache ลง Redis)
+  owner: { select: { id: true, name: true, username: true } },
   reviewer: { select: { id: true, name: true } },
   evidence: { where: { deleted_at: null } },
   budgetItems: { where: { deleted_at: null } },

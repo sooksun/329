@@ -31,7 +31,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             ระบบบริหารโครงการงานแข่งขันกีฬา 329 ชาวจีนยูนาน
           </h1>
           <p className="mt-5 max-w-xl text-lg text-blue-100">
-            รอบจัดงาน 29 มี.ค. – 5 เม.ย. 2570 · 329 = เดือน 3 วันที่ 29
+            จัดขึ้นทุกปีในวันที่ 29 มีนาคม · 329 = เดือน 3 วันที่ 29
           </p>
         </section>
 
@@ -49,7 +49,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           <div className="mx-auto w-full max-w-md">
             {params.error === "no_project" ? (
               <p className="mb-4 rounded-md border border-[#fecdca] bg-[#fff5f5] px-4 py-3 text-sm font-bold text-[#b42318]">
-                บัญชีนี้ยังไม่มีสิทธิ์เข้าถึงโปรเจกต์ — ติดต่อผู้ดูแล หรือรัน npm run db:backfill-phase3
+                บัญชีนี้ยังไม่มีสิทธิ์เข้าถึงโปรเจกต์ใด — โปรดติดต่อผู้ดูแลระบบ
               </p>
             ) : null}
             <LoginForm />

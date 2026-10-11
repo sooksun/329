@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { readApiError } from "@/lib/messages";
 import { formatThaiDateTime } from "@/lib/utils";
 
@@ -19,9 +19,13 @@ export function AuditLogViewer({ initialItems }: { initialItems: LogRow[] }) {
   const [items, setItems] = useState(initialItems);
   const [entityType, setEntityType] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  // หน้า server โหลดรายการแรกให้แล้ว — ไม่ต้องดึงซ้ำตอน mount
+  const skipInitialLoad = useRef(true);
 
   const load = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
       const params = new URLSearchParams();
       if (entityType) params.set("entity_type", entityType);
@@ -30,14 +34,19 @@ export function AuditLogViewer({ initialItems }: { initialItems: LogRow[] }) {
       if (!response.ok) throw new Error(await readApiError(response, "โหลดไม่สำเร็จ"));
       const body = (await response.json()) as { items: LogRow[] };
       setItems(body.items ?? []);
-    } catch {
-      setItems([]);
+    } catch (loadError) {
+      // คงรายการเดิมไว้และแจ้งให้รู้ — เดิมล้างตารางเป็น "ไม่พบบันทึก" แบบเงียบๆ
+      setError(loadError instanceof Error ? loadError.message : "โหลดไม่สำเร็จ");
     } finally {
       setLoading(false);
     }
   }, [entityType]);
 
   useEffect(() => {
+    if (skipInitialLoad.current) {
+      skipInitialLoad.current = false;
+      return;
+    }
     void load();
   }, [load]);
 
@@ -62,6 +71,12 @@ export function AuditLogViewer({ initialItems }: { initialItems: LogRow[] }) {
           {loading ? "กำลังโหลด..." : "รีเฟรช"}
         </button>
       </div>
+
+      {error ? (
+        <p role="alert" className="rounded-md border border-[#fecdca] bg-[#fff5f5] px-3 py-2 text-sm font-bold text-[#b42318]">
+          {error} — แสดงข้อมูลชุดก่อนหน้า
+        </p>
+      ) : null}
 
       <div className="mis-table-scroll overflow-x-auto rounded-md border">
         <table className="min-w-[640px] w-full text-left text-sm">

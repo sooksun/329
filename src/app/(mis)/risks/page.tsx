@@ -1,3 +1,4 @@
+import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getServerSession } from "next-auth";
 import { RiskManager } from "@/components/risk-manager";
@@ -11,12 +12,12 @@ import { getRisksPageData } from "@/server/project/loaders/risks";
 import { canManageRisksGlobally } from "@/server/risks/access";
 
 type RisksPageProps = {
-  searchParams?: Promise<{ level?: string; score?: string }>;
+  searchParams?: Promise<{ level?: string; l?: string; i?: string }>;
 };
 
 export default async function RisksPage({ searchParams }: RisksPageProps) {
   const data = await getRisksPageData();
-  if (!data) return null;
+  if (!data) notFound();
 
   const session = await getServerSession(authOptions);
   const user = getSessionUser(session);
@@ -26,10 +27,13 @@ export default async function RisksPage({ searchParams }: RisksPageProps) {
     user && !canManageGlobal && user.roles.includes("Committee Lead") ? (access?.committeeIds ?? []) : [];
 
   const params = (await searchParams) ?? {};
-  const selectedScore = params.score ? Number(params.score) : undefined;
+  // กรองตาม "ช่อง" (โอกาส × ผลกระทบ) — เดิมกรองตามคะแนน ทำให้ช่อง 1×4, 4×1, 2×2 ปนกัน
+  const selectedLikelihood = Number(params.l) || undefined;
+  const selectedImpact = Number(params.i) || undefined;
   const risks = data.risks.filter((risk) => {
     if (params.level && risk.level !== params.level) return false;
-    if (selectedScore && risk.score !== selectedScore) return false;
+    if (selectedLikelihood && risk.likelihood !== selectedLikelihood) return false;
+    if (selectedImpact && risk.impact !== selectedImpact) return false;
     return true;
   });
 
@@ -78,7 +82,20 @@ export default async function RisksPage({ searchParams }: RisksPageProps) {
       <SplitLayout
         asideFirstOnMobile
         main={
-          <SectionCard title="ความเสี่ยงทั้งหมด">
+          <SectionCard
+            title={
+              selectedLikelihood && selectedImpact
+                ? `ความเสี่ยง โอกาส ${selectedLikelihood} × ผลกระทบ ${selectedImpact}`
+                : "ความเสี่ยงทั้งหมด"
+            }
+            action={
+              selectedLikelihood || params.level ? (
+                <Link href="/risks" className="text-sm font-bold text-[#123f76] underline">
+                  ล้างตัวกรอง
+                </Link>
+              ) : undefined
+            }
+          >
             <div className="space-y-3">
               {risks.map((risk) => (
                 <Link
@@ -107,29 +124,44 @@ export default async function RisksPage({ searchParams }: RisksPageProps) {
         }
         aside={
           <SectionCard title="เมทริกซ์ความเสี่ยง">
-            <p className="mb-2 text-xs text-[#667085]">เลื่อนซ้าย-ขวาบนมือถือ · แตะช่องเพื่อกรอง</p>
+            <p className="mb-2 text-xs text-[#667085]">แกนตั้ง = โอกาสเกิด (5 สูงสุดอยู่บน) · แกนนอน = ผลกระทบ · แตะช่องเพื่อกรอง</p>
             <div className="mis-table-scroll -mx-1 px-1">
-              <div className="inline-grid min-w-[280px] grid-cols-5 gap-1 sm:min-w-0 sm:w-full">
-                {Array.from({ length: 25 }, (_, index) => {
-                  const likelihood = Math.floor(index / 5) + 1;
-                  const impact = (index % 5) + 1;
-                  const score = likelihood * impact;
-                  const count = data.risks.filter((r) => r.likelihood === likelihood && r.impact === impact).length;
-                  return (
-                    <Link
-                      href={`/risks?score=${score}`}
-                      key={index}
-                      className="grid aspect-square min-h-[44px] place-items-center rounded text-sm font-black"
-                      style={{
-                        background: score >= 16 ? "#ffe3e7" : score >= 11 ? "#fff0d0" : score >= 6 ? "#edf6ff" : "#ecf9ef",
-                        color: score >= 16 ? "#b91528" : "#123f76"
-                      }}
-                      title={`คะแนน ${score}`}
-                    >
-                      {count || ""}
-                    </Link>
-                  );
+              <div className="inline-grid min-w-[300px] grid-cols-[auto_repeat(5,minmax(0,1fr))] gap-1 sm:min-w-0 sm:w-full">
+                {Array.from({ length: 5 }, (_, row) => {
+                  const likelihood = 5 - row;
+                  return [
+                    <span key={`l${likelihood}`} className="grid place-items-center px-1 text-xs font-bold text-[#667085]">
+                      {likelihood}
+                    </span>,
+                    ...Array.from({ length: 5 }, (_, col) => {
+                      const impact = col + 1;
+                      const score = likelihood * impact;
+                      const count = data.risks.filter((r) => r.likelihood === likelihood && r.impact === impact).length;
+                      const active = selectedLikelihood === likelihood && selectedImpact === impact;
+                      return (
+                        <Link
+                          href={active ? "/risks" : `/risks?l=${likelihood}&i=${impact}`}
+                          key={`${likelihood}-${impact}`}
+                          aria-current={active ? "true" : undefined}
+                          className={`grid aspect-square min-h-[44px] place-items-center rounded text-sm font-black ${active ? "ring-2 ring-[#123f76] ring-offset-1" : ""}`}
+                          style={{
+                            background: score >= 16 ? "#ffe3e7" : score >= 11 ? "#fff0d0" : score >= 6 ? "#edf6ff" : "#ecf9ef",
+                            color: score >= 16 ? "#b91528" : "#123f76"
+                          }}
+                          title={`โอกาส ${likelihood} × ผลกระทบ ${impact} = คะแนน ${score} · ${count} รายการ`}
+                        >
+                          {count || ""}
+                        </Link>
+                      );
+                    })
+                  ];
                 })}
+                <span />
+                {[1, 2, 3, 4, 5].map((impact) => (
+                  <span key={`i${impact}`} className="text-center text-xs font-bold text-[#667085]">
+                    {impact}
+                  </span>
+                ))}
               </div>
             </div>
           </SectionCard>

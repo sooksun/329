@@ -52,8 +52,20 @@ describe("login rate limit per IP", () => {
   });
 
   it("reads the client IP from proxy headers", () => {
-    expect(clientIpFromHeaders({ "x-forwarded-for": "198.51.100.1, 10.0.0.1" })).toBe("198.51.100.1");
     expect(clientIpFromHeaders({ "x-real-ip": "198.51.100.2" })).toBe("198.51.100.2");
     expect(clientIpFromHeaders(undefined)).toBe("unknown");
+  });
+
+  it("ignores a client-spoofed first X-Forwarded-For hop", () => {
+    // nginx ต่อท้าย IP จริงไว้ตัวสุดท้าย — ค่าแรกมาจาก client และปลอมได้
+    expect(clientIpFromHeaders({ "x-forwarded-for": "1.2.3.4, 198.51.100.9" })).toBe("198.51.100.9");
+  });
+
+  it("caps failures for one account even when the attacker rotates IPs", () => {
+    const u = "rotating_target";
+    for (let i = 0; i < 50; i++) recordLoginFailure(u, `203.0.113.${i}`);
+    expect(isLoginAllowed(u, "198.51.100.77")).toBe(false);
+    resetLoginAttempts(u, "198.51.100.77");
+    expect(isLoginAllowed(u, "198.51.100.77")).toBe(true);
   });
 });

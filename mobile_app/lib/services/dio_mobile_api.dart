@@ -16,9 +16,24 @@ class DioMobileApi implements MobileApi {
                 receiveTimeout: const Duration(seconds: 30),
                 validateStatus: (_) => true,
               ),
-            );
+            ) {
+    // เขียนข้อมูล (POST/PATCH/...) → ทิ้ง export ที่ cache ไว้ ให้รอบถัดไปดึงข้อมูลใหม่
+    _dio.interceptors.add(InterceptorsWrapper(onRequest: (options, handler) {
+      if (options.method.toUpperCase() != 'GET') _exportCache = null;
+      handler.next(options);
+    }));
+  }
 
   final Dio _dio;
+
+  /// export ทั้งก้อนใช้ทั้ง dashboard และรายการงาน — แชร์ผลภายใน 5 วินาที
+  /// (เดิม refreshAll/upload/review ดาวน์โหลด export ซ้ำ 2 รอบต่อการกระทำ)
+  static const _exportCacheTtl = Duration(seconds: 5);
+  ({
+    String token,
+    DateTime at,
+    Future<Map<String, dynamic>> payload
+  })? _exportCache;
 
   @override
   Future<AuthSession> login(String username, String password) async {
@@ -76,13 +91,25 @@ class DioMobileApi implements MobileApi {
 
   @override
   Future<DashboardData> dashboard(String token) async {
-    final payload = await _taskExport(token);
-    final projects = await _request<Map<String, dynamic>>(
-      () => _dio.get('/api/projects', options: _cookieOptions(token)),
-      tokenOverride: token,
-    );
-    final user = await _currentUser(token);
+    // 3 คำขอไม่ขึ้นต่อกัน — ยิงพร้อมกัน (เดิมรอทีละอัน)
+    final results = await Future.wait<Object>([
+      _taskExport(token),
+      _request<Map<String, dynamic>>(
+        () => _dio.get('/api/projects', options: _cookieOptions(token)),
+        tokenOverride: token,
+      ),
+      _currentUser(token),
+    ]);
+    final payload = results[0] as Map<String, dynamic>;
+    final projects = results[1] as Map<String, dynamic>;
+    final user = results[2] as AppUser;
     final project = _projectFrom(projects, payload);
+    // ตัวเลขภาพรวมจาก server (ถ่วงน้ำหนัก verified เหมือนเว็บ) — เดิม hardcode งบ/วันงาน
+    final overview = payload['overview'] as Map<String, dynamic>? ?? const {};
+    final overviewBudget =
+        overview['budget'] as Map<String, dynamic>? ?? const {};
+    final projectJson = payload['project'] as Map<String, dynamic>? ?? const {};
+    final eventStart = DateTime.tryParse(_str(projectJson['event_date']));
     final tasks = _tasksFromExport(payload);
     final committees = _committeesFrom(payload);
     final delayed = tasks.where((task) => task.isDelayed).length;
@@ -95,9 +122,11 @@ class DioMobileApi implements MobileApi {
         : (tasks.fold<int>(0, (sum, task) => sum + task.reportedProgress) /
                 tasks.length)
             .round();
-    final eventStart = DateTime(2027, 3, 29);
-    final daysRemaining =
-        eventStart.difference(DateTime.now()).inDays.clamp(0, 9999);
+    final daysRemaining = overview['daysRemaining'] != null
+        ? _int(overview['daysRemaining'])
+        : (eventStart == null
+            ? 0
+            : eventStart.difference(DateTime.now()).inDays.clamp(0, 9999));
     return DashboardData(
       user: user,
       project: project,
@@ -119,15 +148,22 @@ class DioMobileApi implements MobileApi {
         committeeProgress: progress,
       ),
       projectKpi: ProjectKpi(
-        overall: progress,
-        totalTasks: tasks.length,
-        delayedTasks: delayed,
-        evidencePending: evidence
-            .where((item) => item.status == EvidenceStatus.pending)
-            .length,
+        overall:
+            overview['overall'] != null ? _int(overview['overall']) : progress,
+        totalTasks: overview['totalTasks'] != null
+            ? _int(overview['totalTasks'])
+            : tasks.length,
+        delayedTasks: overview['delayedTasks'] != null
+            ? _int(overview['delayedTasks'])
+            : delayed,
+        evidencePending: overview['evidencePending'] != null
+            ? _int(overview['evidencePending'])
+            : evidence
+                .where((item) => item.status == EvidenceStatus.pending)
+                .length,
         daysRemaining: daysRemaining,
-        plannedBudget: 3660000,
-        actualBudget: 0,
+        plannedBudget: _num(overviewBudget['planned']),
+        actualBudget: _num(overviewBudget['actual']),
       ),
     );
   }
@@ -303,11 +339,24 @@ class DioMobileApi implements MobileApi {
   }
 
   Future<Map<String, dynamic>> _taskExport(String token) {
-    return _request<Map<String, dynamic>>(
+    final cached = _exportCache;
+    if (cached != null &&
+        cached.token == token &&
+        DateTime.now().difference(cached.at) < _exportCacheTtl) {
+      return cached.payload;
+    }
+    final payload = _request<Map<String, dynamic>>(
       () => _dio.get('/api/tasks/export?format=json',
           options: _cookieOptions(token)),
       tokenOverride: token,
     );
+    _exportCache = (token: token, at: DateTime.now(), payload: payload);
+    // ล้มเหลว → ไม่ cache ความผิดพลาดไว้
+    payload.catchError((Object _) {
+      if (identical(_exportCache?.payload, payload)) _exportCache = null;
+      return const <String, dynamic>{};
+    });
+    return payload;
   }
 
   Future<AppUser> _currentUser(String token) async {
@@ -578,7 +627,13 @@ class DioMobileApi implements MobileApi {
 
   int _int(dynamic value) {
     if (value is int) return value;
-    return int.tryParse(_str(value)) ?? 0;
+    if (value is num) return value.round();
+    return num.tryParse(_str(value))?.round() ?? 0;
+  }
+
+  num _num(dynamic value) {
+    if (value is num) return value;
+    return num.tryParse(_str(value)) ?? 0;
   }
 
   String? _strOrNull(dynamic value) {

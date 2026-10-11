@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Badge } from "@/components/ui";
 import { formatThaiDate } from "@/lib/utils";
-import { ganttBarStyle, GANTT_WINDOW } from "@/lib/event-calendar";
+import { ganttBarStyle, type GanttWindow } from "@/lib/event-calendar";
 
 type TimelineTask = {
   id: string;
@@ -14,11 +14,11 @@ type TimelineTask = {
   due_date: Date;
 };
 
-export function TimelineMobileList({ tasks }: { tasks: TimelineTask[] }) {
+export function TimelineMobileList({ tasks, ganttWindow }: { tasks: TimelineTask[]; ganttWindow: GanttWindow }) {
   return (
     <div className="space-y-3 md:hidden">
-      {tasks.slice(0, 32).map((task) => {
-        const bar = ganttBarStyle(task.start_date, task.due_date, GANTT_WINDOW.start, GANTT_WINDOW.end);
+      {tasks.map((task) => {
+        const bar = ganttBarStyle(task.start_date, task.due_date, ganttWindow.start, ganttWindow.end);
         return (
           <Link
             href={`/tasks/detail?id=${task.id}`}

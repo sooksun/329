@@ -29,7 +29,10 @@ export function computeProjectSummary(input: {
     delayedTasks: tasks.filter((task) => task.status === "DELAYED").length,
     criticalRisks: risks.filter((risk) => ["Critical", "High"].includes(risk.level)).length,
     evidencePending: evidence.filter((item) => item.status === "PENDING").length,
-    evidenceCoverage: Math.round((evidence.filter((item) => item.status === "APPROVED").length / Math.max(1, evidence.length)) * 100),
+    // % ภารกิจที่มีหลักฐานอนุมัติแล้วอย่างน้อย 1 ชิ้น (เดิมคำนวณเป็นสัดส่วนหลักฐานที่อนุมัติ ไม่ใช่ความครอบคลุมงาน)
+    evidenceCoverage: Math.round(
+      (tasks.filter((task) => task.evidence.some((item) => item.status === "APPROVED")).length / Math.max(1, tasks.length)) * 100
+    ),
     next7DaysTasks: tasks.filter((task) => task.due_date >= now && task.due_date <= next).slice(0, 8),
     budget: {
       planned: project.planned_budget || budgetItems.reduce((sum, item) => sum + item.planned_amount, 0),

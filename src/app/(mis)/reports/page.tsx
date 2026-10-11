@@ -1,6 +1,7 @@
+import { notFound } from "next/navigation";
 import { FileSliders } from "lucide-react";
 import Link from "next/link";
-import { ReportGenerateButton } from "@/components/report-actions";
+import { ReportGenerateButton, ReportSnapshotPicker } from "@/components/report-actions";
 import { Badge } from "@/components/ui";
 import { PageHeader, PageStack, SectionCard, SplitLayout } from "@/components/page/page-layout";
 import { linkButtonClasses } from "@/lib/button-styles";
@@ -9,7 +10,7 @@ import { getReportsPageData } from "@/server/project/loaders/reports";
 
 export default async function ReportsPage() {
   const data = await getReportsPageData();
-  if (!data) return null;
+  if (!data) notFound();
   const snapshot = data.snapshots[0];
 
   return (
@@ -62,43 +63,26 @@ export default async function ReportsPage() {
           </div>
         }
         aside={
-          <SectionCard title="ตัวเลือกรายงาน">
-            <label className="block text-sm font-bold">ประเภท</label>
-            <select className="mb-4 mt-1 h-11 w-full rounded-md border px-3" defaultValue="EXECUTIVE_SUMMARY">
-              <option value="EXECUTIVE_SUMMARY">สรุปผู้บริหาร</option>
-              <option value="COMMITTEE_PROGRESS">ความก้าวหน้าคณะกรรมการ</option>
-              <option value="BUDGET_REPORT">รายงานงบประมาณ</option>
-              <option value="FINAL_EVENT_REPORT">รายงานหลังจัดงาน</option>
-            </select>
-            <label className="block text-sm font-bold">Snapshot</label>
-            <select className="mb-4 mt-1 h-11 w-full rounded-md border px-3" defaultValue={snapshot?.id}>
-              {data.snapshots.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.title}
-                </option>
-              ))}
-            </select>
-            <div className="max-h-48 space-y-2 overflow-y-auto text-sm">
+          <SectionCard title="สร้างจาก Snapshot ที่เลือก">
+            <ReportSnapshotPicker snapshots={data.snapshots.map((item) => ({ id: item.id, title: item.title }))} />
+            <p className="mt-4 text-sm font-bold">รายงานสรุปผู้บริหาร (11 สไลด์)</p>
+            <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-[#667085]">
               {[
                 "หน้าปก",
-                "ภาพรวมโครงการ",
-                "แดชบอร์ดภาพรวม",
+                "ภาพรวมโครงการ (KPI)",
                 "ความก้าวหน้าตามคณะ",
                 "งานล่าช้า",
-                "ไทม์ไลน์",
+                "ไทม์ไลน์งานที่ยังไม่ปิด",
                 "สรุปงบประมาณ",
                 "เมทริกซ์ความเสี่ยง",
-                "แกลเลอรีหลักฐาน",
+                "สรุปหลักฐาน",
                 "ประเด็นที่ต้องตัดสินใจ",
-                "7 วันข้างหน้า",
+                "งาน 7 วันข้างหน้า",
                 "สรุปท้ายรายงาน"
               ].map((section) => (
-                <label key={section} className="flex min-h-[36px] items-center gap-2">
-                  <input type="checkbox" defaultChecked className="h-4 w-4" />
-                  {section}
-                </label>
+                <li key={section}>{section}</li>
               ))}
-            </div>
+            </ul>
           </SectionCard>
         }
       />

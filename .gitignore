@@ -33,3 +33,8 @@ prisma/*.db-journal
 # misc
 *.tsbuildinfo
 next-env.d.ts
+
+# DB dumps (มี hash รหัสผ่าน/ข้อมูลจริง) และไฟล์แพ็กสำหรับ deploy — ห้าม commit
+prisma/yunnansports.sql
+*.sql.gz
+*.tar.gz

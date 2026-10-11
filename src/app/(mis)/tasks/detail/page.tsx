@@ -1,3 +1,4 @@
+import { notFound } from "next/navigation";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { getServerSession } from "next-auth";
@@ -30,7 +31,7 @@ type TaskDetailPageProps = {
 export default async function TaskDetailPage({ searchParams }: TaskDetailPageProps) {
   const params = (await searchParams) ?? {};
   const data = await getTaskDetailPageData(params.id);
-  if (!data) return null;
+  if (!data) notFound();
   const { task } = data;
 
   const session = await getServerSession(authOptions);

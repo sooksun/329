@@ -116,11 +116,20 @@ export async function addCommitteeMember(input: {
   position: string;
 }) {
   const committee = await prisma.committee.findFirst({
-    where: { id: input.committeeId, project_id: input.projectId, deleted_at: null }
+    where: { id: input.committeeId, project_id: input.projectId, deleted_at: null },
+    include: { project: { select: { organization_id: true } } }
   });
   if (!committee) throw new Error(errors.committeeNotFound);
 
-  const user = await prisma.user.findFirst({ where: { id: input.userId, deleted_at: null } });
+  // ผู้ใช้ต้องสังกัดองค์กรเดียวกับโปรเจกต์ — กันดึงผู้ใช้ของ tenant อื่นเข้าคณะด้วย id
+  const user = await prisma.user.findFirst({
+    where: {
+      id: input.userId,
+      deleted_at: null,
+      orgMemberships: { some: { organization_id: committee.project.organization_id } }
+    },
+    select: { id: true }
+  });
   if (!user) throw new Error("ไม่พบผู้ใช้");
 
   const position = input.position.trim();

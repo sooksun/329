@@ -1,4 +1,4 @@
-import { formatThaiDateShort } from "@/lib/format-date";
+import { formatThaiDate, formatThaiDateShort } from "@/lib/format-date";
 
 /** ปฏิทินงาน 329 — 3 = มีนาคม, 29 = วันที่ 29 (เริ่มทุกปี) */
 export const EVENT_329 = {
@@ -24,8 +24,34 @@ export function addDays(date: Date, days: number) {
   return next;
 }
 
-export function formatThaiEventPeriod(start = EVENT_329.start, end: Date = EVENT_329.end) {
+export function formatThaiEventPeriod(start: Date | string = EVENT_329.start, end: Date | string = EVENT_329.end) {
   return `${formatThaiDateShort(start)} – ${formatThaiDateShort(end)}`;
+}
+
+export type GanttWindow = { start: Date; end: Date };
+
+/**
+ * หน้าต่าง Gantt ของโปรเจกต์ที่เลือก (ไม่ผูกกับรอบ 2570): ตั้งแต่ภารกิจที่เริ่มเร็วสุด
+ * (ไม่มีภารกิจ → ~10 เดือนก่อนวันงาน) ถึงหลังปิดงาน 21 วัน หรือกำหนดส่งช้าสุด
+ */
+export function projectGanttWindow(
+  eventStart: Date,
+  eventEnd: Date | null,
+  tasks: { start_date: Date; due_date: Date }[]
+): GanttWindow {
+  const starts = tasks.map((task) => task.start_date.getTime());
+  const dues = tasks.map((task) => task.due_date.getTime());
+  const start = starts.length ? new Date(Math.min(...starts)) : addDays(eventStart, -300);
+  const end = new Date(Math.max(addDays(eventEnd ?? eventStart, 21).getTime(), ...dues));
+  return { start, end };
+}
+
+/** ป้ายเดือนแบ่งเท่าๆ กันตามหน้าต่าง Gantt เช่น "มิ.ย. 69" */
+export function ganttMonthLabels(window: GanttWindow, count = 5) {
+  const span = window.end.getTime() - window.start.getTime();
+  return Array.from({ length: count }, (_, index) =>
+    formatThaiDate(new Date(window.start.getTime() + (span * index) / Math.max(1, count - 1)), "MMM BB")
+  );
 }
 
 export function daysUntilEvent(from = new Date(), eventStart = EVENT_329.start) {

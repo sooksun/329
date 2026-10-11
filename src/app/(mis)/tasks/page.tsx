@@ -1,3 +1,4 @@
+import { notFound } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { Card } from "@/components/ui";
 import { PageHeader, PageLink, PageStack } from "@/components/page/page-layout";
@@ -45,7 +46,7 @@ function toBoardItem(task: TaskRow): TaskBoardItem {
 
 export default async function TasksPage({ searchParams }: TasksPageProps) {
   const data = await getTasksPageData();
-  if (!data) return null;
+  if (!data) notFound();
 
   const session = await getServerSession(authOptions);
   const user = getSessionUser(session);

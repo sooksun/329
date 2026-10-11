@@ -37,10 +37,14 @@ export function canViewTask(
  */
 export function canVerifyTask(
   user: SessionUser,
-  task: { reviewer_id: string | null },
-  access: CommitteeAccessContext
+  task: { reviewer_id: string | null; owner_id: string | null },
+  access: CommitteeAccessContext,
+  extraOwnerIds: (string | null)[] = []
 ) {
-  return access.isGlobalAdmin || can(user.roles, permissions.evidenceReview) || user.id === task.reviewer_id;
+  if (access.isGlobalAdmin) return true;
+  // แยกหน้าที่: เจ้าของงาน (ภารกิจ/งานย่อย) รับรองผลงานตัวเองไม่ได้ แม้มีสิทธิ์ evidence:review
+  if ([task.owner_id, ...extraOwnerIds].includes(user.id)) return false;
+  return can(user.roles, permissions.evidenceReview) || user.id === task.reviewer_id;
 }
 
 export function canUploadEvidence(

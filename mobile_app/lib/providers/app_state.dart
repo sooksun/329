@@ -95,9 +95,15 @@ class AppState extends ChangeNotifier {
   Future<void> refreshAll() async {
     final token = session?.token;
     if (token == null) return;
-    dashboardData = await _api.dashboard(token);
-    tasks = await _api.myTasks(token);
-    notifications = await _api.notifications(token);
+    // ยิงพร้อมกัน — dashboard กับ myTasks ใช้ export ชุดเดียวกัน (cache ใน DioMobileApi)
+    final results = await Future.wait<Object>([
+      _api.dashboard(token),
+      _api.myTasks(token),
+      _api.notifications(token),
+    ]);
+    dashboardData = results[0] as DashboardData;
+    tasks = results[1] as List<TaskItem>;
+    notifications = results[2] as List<AppNotification>;
     notifyListeners();
   }
 

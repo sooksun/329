@@ -1,3 +1,4 @@
+import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getServerSession } from "next-auth";
 import { CommitteeManager } from "@/components/committee-manager";
@@ -24,7 +25,7 @@ type CommitteesPageProps = {
 
 export default async function CommitteesPage({ searchParams }: CommitteesPageProps) {
   const data = await getCommitteesPageData();
-  if (!data) return null;
+  if (!data) notFound();
 
   const session = await getServerSession(authOptions);
   const user = getSessionUser(session);

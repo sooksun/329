@@ -1,3 +1,4 @@
+import { notFound } from "next/navigation";
 import { TasksExportActions, TaskExportDownloadButton } from "@/components/tasks-export-actions";
 import { MetricGrid, MetricTile, PageHeader, PageLink, PageStack, SectionCard } from "@/components/page/page-layout";
 import { TASK_EXPORT_HEADERS } from "@/lib/task-export";
@@ -11,7 +12,7 @@ export default async function TaskExportPage({ searchParams }: TaskExportPagePro
   const params = (await searchParams) ?? {};
   const committeeId = params.committee?.trim() || undefined;
   const data = await getTaskExportPageData(committeeId);
-  if (!data) return null;
+  if (!data) notFound();
 
   const previewRows = data.rows.slice(0, 40);
 
