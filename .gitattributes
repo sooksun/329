@@ -1,0 +1,3 @@
+# shell scripts ต้องเป็น LF เสมอ — CRLF ทำให้ Linux รันไม่ได้ ("no such file or directory")
+*.sh text eol=lf
+Dockerfile text eol=lf

@@ -28,7 +28,8 @@ ENV PORT=3000
 # ที่มี prisma CLI/tsx — จำเป็นสำหรับ db push, db:seed และ worker:reports)
 COPY --from=builder /app ./
 COPY deploy/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
-RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+# ตัด \r ออกเผื่อไฟล์ถูกคัดลอกมาเป็น CRLF (เช่น git archive บน Windows) — ไม่งั้น "no such file or directory"
+RUN sed -i 's/\r$//' /usr/local/bin/docker-entrypoint.sh && chmod +x /usr/local/bin/docker-entrypoint.sh
 EXPOSE 3000
 ENTRYPOINT ["docker-entrypoint.sh"]
 CMD ["npm", "run", "start"]
