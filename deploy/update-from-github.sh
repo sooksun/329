@@ -96,9 +96,6 @@ echo "    เวอร์ชันตอนนี้: $(g log -1 --format='%h %s
 [ "$OLD_REV" != "none" ] && [ "$(g rev-parse HEAD)" = "$OLD_REV" ] && [ "$CHANGED" -eq 0 ] && \
   echo "    (ไม่มีอะไรใหม่ — จะ rebuild ต่อตามปกติ)"
 
-# สคริปต์ .sh ต้องรันได้
-chmod +x deploy/*.sh 2>/dev/null || true
-
 step "[3/4] build + start containers (redis, web, worker)"
 COMPOSE=(docker compose --env-file "$ENV_FILE" -f "$APP_DIR/docker-compose.prod.yml")
 "${COMPOSE[@]}" up -d --build
