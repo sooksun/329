@@ -37,8 +37,9 @@ services:
       redis:
         condition: service_started
     ports:
-      # host port ปรับได้ด้วย WEB_PORT ใน .env.production (server ที่ 3000 มีงานอื่นใช้อยู่ ใช้ 9990)
-      - "${WEB_PORT:-3000}:3000"
+      # host port ต้องตั้ง WEB_PORT ใน .env.production (server จริงใช้ 9990 — 3000 มีแอปอื่นใช้อยู่)
+      # ไม่มีค่า default: ถ้าลืมตั้ง compose จะหยุดพร้อมข้อความ แทนที่จะไปชน port ของแอปอื่น
+      - "${WEB_PORT:?ตั้ง WEB_PORT ใน .env.production ก่อน (server จริงใช้ 9990)}:3000"
     volumes:
       - ./storage:/app/storage # เก็บไฟล์อัปโหลด/รายงาน/log ให้คงอยู่บน host
 

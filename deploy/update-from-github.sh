@@ -45,6 +45,20 @@ docker compose version >/dev/null 2>&1 || die "ไม่พบ 'docker compose' 
 cd "$APP_DIR"
 [ -f "$ENV_FILE" ] || die "ไม่พบ $APP_DIR/$ENV_FILE — สร้างจาก .env.production.example ก่อน"
 
+# ---- ตรวจ port ก่อนทำอะไร (เซิร์ฟเวอร์มีหลายแอป — ห้ามเดา port) ----
+WEB_PORT="$(grep -E '^WEB_PORT=' "$ENV_FILE" | tail -1 | cut -d= -f2- | tr -d '"'"'"' \r' || true)"
+[ -n "$WEB_PORT" ] || die "ยังไม่ได้ตั้ง WEB_PORT ใน $ENV_FILE (server จริงใช้ 9990 — 3000 มีแอปอื่นใช้อยู่)
+   ตั้ง port ที่ 329 ใช้อยู่เดิม เช่น:  echo 'WEB_PORT=9990' >> $APP_DIR/$ENV_FILE"
+case "$WEB_PORT" in *[!0-9]*) die "WEB_PORT ต้องเป็นตัวเลข (ตอนนี้: $WEB_PORT)";; esac
+# port ต้องว่าง หรือถูกใช้โดย container ของ 329 เอง (yunnansports-web) เท่านั้น
+PORT_OWNER="$(docker ps --format '{{.Names}} {{.Ports}}' | grep -E "[:]${WEB_PORT}->" | awk '{print $1}' | grep -v '^yunnansports-web$' || true)"
+[ -z "$PORT_OWNER" ] || die "port $WEB_PORT ถูก container อื่นใช้อยู่: $PORT_OWNER — ตรวจ WEB_PORT ใน $ENV_FILE"
+if ! docker ps --format '{{.Names}} {{.Ports}}' | grep -qE "^yunnansports-web .*[:]${WEB_PORT}->" \
+   && command -v ss >/dev/null && ss -ltnH "( sport = :$WEB_PORT )" | grep -q .; then
+  die "port $WEB_PORT มีโปรแกรมอื่น listen อยู่ (ดู: ss -ltnp | grep :$WEB_PORT)"
+fi
+echo "port ที่ใช้: $WEB_PORT"
+
 step "[1/4] สำรองโค้ดปัจจุบัน → $BACKUP_DIR/code-$TS.tgz"
 mkdir -p "$BACKUP_DIR"
 tar --exclude=./node_modules --exclude=./.next --exclude=./storage --exclude=./.git \
@@ -91,8 +105,6 @@ COMPOSE=(docker compose --env-file "$ENV_FILE" -f "$APP_DIR/docker-compose.prod.
 "${COMPOSE[@]}" ps
 
 step "[4/4] ตรวจว่าเว็บตอบ"
-WEB_PORT="$(grep -E '^WEB_PORT=' "$ENV_FILE" | tail -1 | cut -d= -f2- | tr -d '"'"'"' ' || true)"
-WEB_PORT="${WEB_PORT:-3000}"
 OK=""
 for _ in $(seq 1 30); do
   CODE="$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:$WEB_PORT/login" || true)"
