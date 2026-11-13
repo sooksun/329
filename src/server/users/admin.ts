@@ -1,5 +1,6 @@
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
+import { invalidateProjectCache } from "@/server/cache/invalidate";
 import { normalizeUsername, validatePassword, validateUsername } from "@/lib/user-account";
 
 const assignableRoles = new Set([
@@ -152,6 +153,8 @@ export async function updateUserByAdmin(input: {
 
   const password_hash = input.password ? await bcrypt.hash(input.password, 10) : undefined;
 
+  const affectedProjectIds = new Set<string>();
+
   await prisma.$transaction(async (tx) => {
     await tx.user.update({
       where: { id: input.userId },
@@ -194,6 +197,34 @@ export async function updateUserByAdmin(input: {
       }
     }
 
+    // ชื่อหัวหน้าคณะ/ผู้รับผิดชอบความเสี่ยง/ผู้รับผิดชอบมติประชุม เก็บเป็นข้อความ (ไม่ได้ผูก user)
+    // → sync ชื่อใหม่ให้ตรงกับบัญชีผู้ใช้
+    const oldName = existing.name;
+    const committeesToSync = await tx.committee.findMany({
+      where: {
+        deleted_at: null,
+        owner_name: { not: name },
+        OR: [
+          { owner_name: oldName },
+          { members: { some: { user_id: input.userId, position: { startsWith: "หัวหน้า" } } } }
+        ]
+      },
+      select: { id: true, project_id: true }
+    });
+    if (committeesToSync.length) {
+      await tx.committee.updateMany({
+        where: { id: { in: committeesToSync.map((c) => c.id) } },
+        data: { owner_name: name }
+      });
+      committeesToSync.forEach((c) => affectedProjectIds.add(c.project_id));
+    }
+    if (oldName !== name) {
+      const risks = await tx.risk.findMany({ where: { owner_name: oldName }, select: { project_id: true } });
+      await tx.risk.updateMany({ where: { owner_name: oldName }, data: { owner_name: name } });
+      risks.forEach((r) => affectedProjectIds.add(r.project_id));
+      await tx.meetingActionItem.updateMany({ where: { owner_name: oldName }, data: { owner_name: name } });
+    }
+
     await tx.auditLog.create({
       data: {
         user_id: input.updatedById,
@@ -215,6 +246,9 @@ export async function updateUserByAdmin(input: {
       }
     });
   });
+
+  // dashboard/shell ของโครงการ cache ไว้ใน Redis — ล้างเพื่อให้ชื่อใหม่แสดงทันที
+  await Promise.all([...affectedProjectIds].map((id) => invalidateProjectCache(id).catch(() => undefined)));
 
   return { id: input.userId, name, username };
 }
