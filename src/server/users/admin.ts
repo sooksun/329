@@ -100,6 +100,125 @@ export async function createUserByAdmin(input: {
   return safeUser;
 }
 
+/**
+ * แก้ไขข้อมูลผู้ใช้โดยผู้ดูแลระบบ
+ * - roleName: เปลี่ยนเฉพาะบทบาทที่ assign ได้ (บทบาทระดับระบบ เช่น Super Admin คงไว้)
+ * - committeeId: undefined = ไม่เปลี่ยน, "" = ถอดออกจากคณะในโครงการนี้, id = ย้ายไปคณะนั้น
+ * - committeeScopeIds: คณะของโครงการที่ active — แก้เฉพาะลิงก์ในขอบเขตนี้ ไม่แตะโครงการอื่น
+ */
+export async function updateUserByAdmin(input: {
+  userId: string;
+  name: string;
+  username: string;
+  password?: string;
+  roleName?: string;
+  committeeId?: string;
+  position?: string;
+  committeeScopeIds: string[];
+  updatedById: string;
+}) {
+  const name = input.name.trim();
+  if (!name) throw new Error("กรุณาระบุชื่อ-นามสกุล");
+  const usernameError = validateUsername(input.username);
+  if (usernameError) throw new Error(usernameError);
+  if (input.password) {
+    const passwordError = validatePassword(input.password, { required: true });
+    if (passwordError) throw new Error(passwordError);
+  }
+
+  const existing = await prisma.user.findFirst({
+    where: { id: input.userId, deleted_at: null },
+    include: { roles: { include: { role: true } }, committeeLinks: true }
+  });
+  if (!existing) throw new Error("ไม่พบบัญชีผู้ใช้");
+
+  const username = normalizeUsername(input.username);
+  const duplicate = await prisma.user.findFirst({
+    where: { username, id: { not: input.userId }, deleted_at: null }
+  });
+  if (duplicate) throw new Error("ชื่อผู้ใช้นี้มีในระบบแล้ว");
+
+  let newRoleId: string | undefined;
+  if (input.roleName) {
+    if (!assignableRoles.has(input.roleName)) throw new Error("บทบาทที่เลือกไม่ถูกต้อง");
+    const role = await prisma.role.findUnique({ where: { name: input.roleName } });
+    if (!role) throw new Error("ไม่พบบทบาทที่เลือก");
+    newRoleId = role.id;
+  }
+
+  if (input.committeeId && !input.committeeScopeIds.includes(input.committeeId)) {
+    throw new Error("ไม่พบคณะกรรมการที่เลือกในโครงการนี้");
+  }
+
+  const password_hash = input.password ? await bcrypt.hash(input.password, 10) : undefined;
+
+  await prisma.$transaction(async (tx) => {
+    await tx.user.update({
+      where: { id: input.userId },
+      data: { name, username, ...(password_hash ? { password_hash } : {}) }
+    });
+
+    if (newRoleId) {
+      const assignableRoleIds = existing.roles
+        .filter((r) => assignableRoles.has(r.role.name))
+        .map((r) => r.role_id);
+      if (assignableRoleIds.length) {
+        await tx.userRole.deleteMany({
+          where: { user_id: input.userId, role_id: { in: assignableRoleIds } }
+        });
+      }
+      const hasRole = existing.roles.some(
+        (r) => r.role_id === newRoleId && !assignableRoles.has(r.role.name)
+      );
+      if (!hasRole) {
+        await tx.userRole.create({ data: { user_id: input.userId, role_id: newRoleId } });
+      }
+    }
+
+    if (input.committeeId !== undefined) {
+      const position = input.position?.trim() || "สมาชิกคณะ";
+      const current = existing.committeeLinks.find((l) => input.committeeScopeIds.includes(l.committee_id));
+      if (current && current.committee_id === input.committeeId) {
+        await tx.committeeMember.update({ where: { id: current.id }, data: { position } });
+      } else {
+        if (input.committeeScopeIds.length) {
+          await tx.committeeMember.deleteMany({
+            where: { user_id: input.userId, committee_id: { in: input.committeeScopeIds } }
+          });
+        }
+        if (input.committeeId) {
+          await tx.committeeMember.create({
+            data: { user_id: input.userId, committee_id: input.committeeId, position }
+          });
+        }
+      }
+    }
+
+    await tx.auditLog.create({
+      data: {
+        user_id: input.updatedById,
+        action: "Update user",
+        entity_type: "User",
+        entity_id: input.userId,
+        old_value: JSON.stringify({
+          username: existing.username,
+          name: existing.name,
+          roles: existing.roles.map((r) => r.role.name)
+        }),
+        new_value: JSON.stringify({
+          username,
+          name,
+          role: input.roleName ?? null,
+          committee_id: input.committeeId ?? null,
+          password_reset: Boolean(password_hash)
+        })
+      }
+    });
+  });
+
+  return { id: input.userId, name, username };
+}
+
 export async function listCommitteeMembers(committeeId: string) {
   return prisma.committeeMember.findMany({
     where: { committee_id: committeeId },
