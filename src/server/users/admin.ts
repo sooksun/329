@@ -1,7 +1,7 @@
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { invalidateProjectCache } from "@/server/cache/invalidate";
-import { normalizeUsername, validatePassword, validateUsername } from "@/lib/user-account";
+import { nameInitials, normalizeUsername, validatePassword, validateUsername } from "@/lib/user-account";
 
 const assignableRoles = new Set([
   "Committee Lead",
@@ -214,7 +214,7 @@ export async function updateUserByAdmin(input: {
     if (committeesToSync.length) {
       await tx.committee.updateMany({
         where: { id: { in: committeesToSync.map((c) => c.id) } },
-        data: { owner_name: name }
+        data: { owner_name: name, owner_initials: nameInitials(name) }
       });
       committeesToSync.forEach((c) => affectedProjectIds.add(c.project_id));
     }

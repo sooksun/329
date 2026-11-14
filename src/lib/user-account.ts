@@ -4,6 +4,31 @@ export function normalizeUsername(value: string) {
   return value.trim().toLowerCase();
 }
 
+const THAI_LEADING_VOWELS = new Set(["เ", "แ", "โ", "ใ", "ไ"]);
+const THAI_LOW_AFTER_HO = new Set(["ง", "ญ", "น", "ม", "ย", "ร", "ล", "ว"]);
+
+function thaiWordInitial(word: string) {
+  let w = word.replace(/^(แซ่|แช่)(?=\S)/, "");
+  if (!w) w = word;
+  let i = 0;
+  while (i < w.length && THAI_LEADING_VOWELS.has(w[i])) i++;
+  if (w[i] === "ห" && THAI_LOW_AFTER_HO.has(w[i + 1] ?? "")) i++;
+  return w[i] ?? "";
+}
+
+/** ตัวย่อ 2 ตัวจากชื่อ-นามสกุล เช่น "สินชัย แซ่ลี 李靜平" → "สล" (ข้ามสระนำ, ห นำ, คำว่า "แซ่", ตัวอักษรจีน) */
+export function nameInitials(fullName: string) {
+  const words = fullName
+    .trim()
+    .split(/\s+/)
+    .filter((w) => /[฀-๿a-zA-Z]/.test(w));
+  const initials = words
+    .slice(0, 2)
+    .map((w) => (/^[฀-๿]/.test(w) ? thaiWordInitial(w) : w[0].toUpperCase()))
+    .join("");
+  return initials || fullName.trim().slice(0, 2);
+}
+
 export function validateUsername(value: string) {
   const username = normalizeUsername(value);
   if (!username) return "กรุณาระบุชื่อผู้ใช้";
